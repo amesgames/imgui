@@ -6190,30 +6190,17 @@ stb_uint stb_compress(stb_uchar* out, stb_uchar* in, stb_uint len);
 char Encode85Byte(unsigned int x)
 {
     x = (x % 85) + 35;
-    return (x >= '\\') ? x + 1 : x;
+    return (x >= '\\') ? char(x + 1) : char(x);
 }
 
-void ImGui::ShowStyleEditor(ImGuiStyle* ref)
+// Amesgames "Export to Source" addon that allows designers to save the font and style settings to source code.
+static void ExportToSource()
 {
-    IMGUI_DEMO_MARKER("Tools/Style Editor");
-    // You can pass in a reference ImGuiStyle structure to compare to, revert to and save to
-    // (without a reference style pointer, we will use one compared locally as a reference)
-    ImGuiStyle& style = ImGui::GetStyle();
-    static ImGuiStyle ref_saved_style;
-
-    // Default to using internal storage as reference
-    static bool init = true;
-    if (init && ref == NULL)
-        ref_saved_style = style;
-    init = false;
-    if (ref == NULL)
-        ref = &ref_saved_style;
-
-    ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
-
     ImGuiIO& io = ImGui::GetIO();
     if (ImGui::Button("Export to Source"))
     {
+        ImGuiStyle& style = ImGui::GetStyle();
+
         int srcPathSize = strlen(io.srcPath);
         char* srcPath = (char*)ImGui::MemAlloc(srcPathSize + 4 + 1);
         strcpy_s(srcPath, srcPathSize + 1, io.srcPath);
@@ -6233,7 +6220,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         FILE* out_hdr = fopen(hdrPath, "wt");
         if (!out || !out_hdr)
         {
-            if(!out)
+            if (!out)
                 fprintf(stderr, "Could not open source path destination file \"%s\" for writing.\n", srcPath);
             if (!out_hdr)
                 fprintf(stderr, "Could not open source header path destination file \"%s\" for writing.\n", hdrPath);
@@ -6248,7 +6235,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             fprintf(out_hdr, "    namespace %s {\n", io.srcNamespace);
             fprintf(out_hdr, "        void LoadFont(float size = %ff);\n", font->ConfigData->SizePixels);
             fprintf(out_hdr, "\n");
-            fprintf(out_hdr, "        void StyleColors();\n");
+            fprintf(out_hdr, "        void Style();\n");
             fprintf(out_hdr, "    }\n");
             fprintf(out_hdr, "}\n");
 
@@ -6325,13 +6312,91 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             fprintf(out, "            io.FontDefault = font;\n");
             fprintf(out, "        }\n");
             fprintf(out, "\n");
-            fprintf(out, "        void StyleColors() {\n");
-            fprintf(out, "            ImVec4* colors = ImGui::GetStyle().Colors;\n");
+            fprintf(out, "        void Style() {\n");
+            fprintf(out, "            ImGuiStyle& style = ImGui::GetStyle();\n");
+            fprintf(out, "            style.Alpha = %ff;\n", style.Alpha);
+            fprintf(out, "            style.DisabledAlpha = %ff;\n", style.DisabledAlpha);
+            fprintf(out, "            style.WindowPadding.x = %ff;\n", style.WindowPadding.x);
+            fprintf(out, "            style.WindowPadding.y = %ff;\n", style.WindowPadding.y);
+            fprintf(out, "            style.WindowRounding = %ff;\n", style.WindowRounding);
+            fprintf(out, "            style.WindowBorderSize = %ff;\n", style.WindowBorderSize);
+            fprintf(out, "            style.WindowMinSize.x = %ff;\n", style.WindowMinSize.x);
+            fprintf(out, "            style.WindowMinSize.y = %ff;\n", style.WindowMinSize.y);
+            fprintf(out, "            style.WindowTitleAlign.x = %ff;\n", style.WindowTitleAlign.x);
+            fprintf(out, "            style.WindowTitleAlign.y = %ff;\n", style.WindowTitleAlign.y);
+            switch (style.WindowMenuButtonPosition)
+            {
+                case ImGuiDir_None:
+                    fprintf(out, "            style.WindowMenuButtonPosition = ImGuiDir_None;\n"); break;
+                case ImGuiDir_Left:
+                    fprintf(out, "            style.WindowMenuButtonPosition = ImGuiDir_Left;\n"); break;
+                case ImGuiDir_Right:
+                    fprintf(out, "            style.WindowMenuButtonPosition = ImGuiDir_Right;\n"); break;
+                case ImGuiDir_Up:
+                    fprintf(out, "            style.WindowMenuButtonPosition = ImGuiDir_Up;\n"); break;
+                case ImGuiDir_Down:
+                    fprintf(out, "            style.WindowMenuButtonPosition = ImGuiDir_Down;\n"); break;
+            }
+            fprintf(out, "            style.ChildRounding = %ff;\n", style.ChildRounding);
+            fprintf(out, "            style.ChildBorderSize = %ff;\n", style.ChildBorderSize);
+            fprintf(out, "            style.PopupRounding = %ff;\n", style.PopupRounding);
+            fprintf(out, "            style.PopupBorderSize = %ff;\n", style.PopupBorderSize);
+            fprintf(out, "            style.FramePadding.x = %ff;\n", style.FramePadding.x);
+            fprintf(out, "            style.FramePadding.y = %ff;\n", style.FramePadding.y);
+            fprintf(out, "            style.FrameRounding = %ff;\n", style.FrameRounding);
+            fprintf(out, "            style.FrameBorderSize = %ff;\n", style.FrameBorderSize);
+            fprintf(out, "            style.ItemSpacing.x = %ff;\n", style.ItemSpacing.x);
+            fprintf(out, "            style.ItemSpacing.y = %ff;\n", style.ItemSpacing.y);
+            fprintf(out, "            style.ItemInnerSpacing.x = %ff;\n", style.ItemInnerSpacing.x);
+            fprintf(out, "            style.ItemInnerSpacing.y = %ff;\n", style.ItemInnerSpacing.y);
+            fprintf(out, "            style.CellPadding.x = %ff;\n", style.CellPadding.x);
+            fprintf(out, "            style.CellPadding.y = %ff;\n", style.CellPadding.y);
+            fprintf(out, "            style.TouchExtraPadding.x = %ff;\n", style.TouchExtraPadding.x);
+            fprintf(out, "            style.TouchExtraPadding.y = %ff;\n", style.TouchExtraPadding.y);
+            fprintf(out, "            style.IndentSpacing = %ff;\n", style.IndentSpacing);
+            fprintf(out, "            style.ColumnsMinSpacing = %ff;\n", style.ColumnsMinSpacing);
+            fprintf(out, "            style.ScrollbarSize = %ff;\n", style.ScrollbarSize);
+            fprintf(out, "            style.ScrollbarRounding = %ff;\n", style.ScrollbarRounding);
+            fprintf(out, "            style.GrabMinSize = %ff;\n", style.GrabMinSize);
+            fprintf(out, "            style.GrabRounding = %ff;\n", style.GrabRounding);
+            fprintf(out, "            style.LogSliderDeadzone = %ff;\n", style.LogSliderDeadzone);
+            fprintf(out, "            style.TabRounding = %ff;\n", style.TabRounding);
+            fprintf(out, "            style.TabBorderSize = %ff;\n", style.TabBorderSize);
+            fprintf(out, "            style.TabMinWidthForCloseButton = %ff;\n", style.TabMinWidthForCloseButton);
+            switch (style.ColorButtonPosition)
+            {
+                case ImGuiDir_None:
+                    fprintf(out, "            style.ColorButtonPosition = ImGuiDir_None;\n"); break;
+                case ImGuiDir_Left:
+                    fprintf(out, "            style.ColorButtonPosition = ImGuiDir_Left;\n"); break;
+                case ImGuiDir_Right:
+                    fprintf(out, "            style.ColorButtonPosition = ImGuiDir_Right;\n"); break;
+                case ImGuiDir_Up:
+                    fprintf(out, "            style.ColorButtonPosition = ImGuiDir_Up;\n"); break;
+                case ImGuiDir_Down:
+                    fprintf(out, "            style.ColorButtonPosition = ImGuiDir_Down;\n"); break;
+            }
+            fprintf(out, "            style.ButtonTextAlign.x = %ff;\n", style.ButtonTextAlign.x);
+            fprintf(out, "            style.ButtonTextAlign.y = %ff;\n", style.ButtonTextAlign.y);
+            fprintf(out, "            style.SelectableTextAlign.x = %ff;\n", style.SelectableTextAlign.x);
+            fprintf(out, "            style.SelectableTextAlign.y = %ff;\n", style.SelectableTextAlign.y);
+            fprintf(out, "            style.DisplayWindowPadding.x = %ff;\n", style.DisplayWindowPadding.x);
+            fprintf(out, "            style.DisplayWindowPadding.y = %ff;\n", style.DisplayWindowPadding.y);
+            fprintf(out, "            style.DisplaySafeAreaPadding.x = %ff;\n", style.DisplaySafeAreaPadding.x);
+            fprintf(out, "            style.DisplaySafeAreaPadding.y = %ff;\n", style.DisplaySafeAreaPadding.y);
+            fprintf(out, "            style.MouseCursorScale = %ff;\n", style.MouseCursorScale);
+            fprintf(out, "            style.AntiAliasedLines = %s;\n", style.AntiAliasedLines ? "true" : "false");
+            fprintf(out, "            style.AntiAliasedLinesUseTex = %s;\n", style.AntiAliasedLinesUseTex ? "true" : "false");
+            fprintf(out, "            style.AntiAliasedFill = %s;\n", style.AntiAliasedFill ? "true" : "false");
+            fprintf(out, "            style.CurveTessellationTol = %ff;\n", style.CurveTessellationTol);
+            fprintf(out, "            style.CircleTessellationMaxError = %ff;\n", style.CircleTessellationMaxError);
+            fprintf(out, "\n");
+            fprintf(out, "            ImVec4* colors = style.Colors;\n");
             for (int i = 0; i < ImGuiCol_COUNT; i++)
             {
                 const ImVec4& col = style.Colors[i];
                 const char* name = ImGui::GetStyleColorName(i);
-                fprintf(out, "            colors[ImGuiCol_%s]%*s= ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);\n",
+                fprintf(out, "            colors[ImGuiCol_%s]%*s = ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);\n",
                     name, 23 - (int)strlen(name), "", col.x, col.y, col.z, col.w);
             }
             fprintf(out, "        }\n");
@@ -6379,6 +6444,27 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         "(--source-namespace, -n) configured on the command-line.");
     ImGui::Text("Source Path: \"%s\"", io.srcPath);
     ImGui::Text("Source Namespace: \"%s\"", io.srcNamespace);
+}
+
+void ImGui::ShowStyleEditor(ImGuiStyle* ref)
+{
+    IMGUI_DEMO_MARKER("Tools/Style Editor");
+    // You can pass in a reference ImGuiStyle structure to compare to, revert to and save to
+    // (without a reference style pointer, we will use one compared locally as a reference)
+    ImGuiStyle& style = ImGui::GetStyle();
+    static ImGuiStyle ref_saved_style;
+
+    // Default to using internal storage as reference
+    static bool init = true;
+    if (init && ref == NULL)
+        ref_saved_style = style;
+    init = false;
+    if (ref == NULL)
+        ref = &ref_saved_style;
+
+    ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
+
+    ExportToSource();
 
     if (ImGui::ShowStyleSelector("Colors##Selector"))
         ref_saved_style = style;
