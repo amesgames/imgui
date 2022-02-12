@@ -6247,7 +6247,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             fprintf(out_hdr, "\n");
             fprintf(out_hdr, "namespace ImGui {\n");
             fprintf(out_hdr, "    namespace %s {\n", io.srcNamespace);
-            fprintf(out_hdr, "        void LoadFont(float size);\n");
+            fprintf(out_hdr, "        void LoadFont(float size = %ff);\n", font->ConfigData->SizePixels);
             fprintf(out_hdr, "\n");
             fprintf(out_hdr, "        void StyleColors();\n");
             fprintf(out_hdr, "    }\n");
@@ -6267,9 +6267,15 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             // Output font as Base85 encoded
             const char* compressed_str = use_compression ? "compressed_" : "";
 
+            // Strip the 13px, or whatever size, off of the tail of the font name
+            const char* commaPtr = strrchr(font->ConfigData->Name, ',');
+            int commaDist = commaPtr - font->ConfigData->Name;
+
             fprintf(out, "#include \"%s.h\"\n", io.srcPath + (lastSlashIdx + 1));
             fprintf(out, "\n");
             fprintf(out, "#include \"imgui.h\"\n");
+            fprintf(out, "\n");
+            fprintf(out, "#include \"imgui_internal.h\"\n");
             fprintf(out, "\n");
             fprintf(out, "namespace ImGui {\n");
             fprintf(out, "    namespace %s {\n", io.srcNamespace);
@@ -6278,7 +6284,9 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             fprintf(out, "\n");
             fprintf(out, "        void LoadFont(float size) {\n");
             fprintf(out, "            ImGuiIO& io = ImGui::GetIO();\n");
-            fprintf(out, "            ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(%s_%sdata_base85, size);\n", "font", compressed_str);
+            fprintf(out, "            ImFontConfig font_cfg;\n");
+            fprintf(out, "            ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), \"%.*s, %%dpx\", (int)size);\n", commaDist, font->ConfigData->Name);
+            fprintf(out, "            ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(%s_%sdata_base85, size, &font_cfg);\n", "font", compressed_str);
             fprintf(out, "            assert(font != nullptr);\n");
             fprintf(out, "            io.FontDefault = font;\n");
             fprintf(out, "        }\n");

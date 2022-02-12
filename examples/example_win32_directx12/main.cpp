@@ -120,7 +120,7 @@ int main(int argc, char** argv)
     // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    //io.Fonts->AddFontDefault();
+    io.Fonts->AddFontDefault();
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
@@ -128,15 +128,12 @@ int main(int argc, char** argv)
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
 
-    ImGui::Amesgames::LoadFont(13.0f);
+    ImGui::Amesgames::LoadFont();
     ImGui::Amesgames::StyleColors();
 
     // Load TTF Fonts from the command-line and set up source file generation data.
     if (argc > 1)
     {
-        // Always load default font
-        io.Fonts->AddFontDefault();
-
         enum class CmdLineState { NONE, SOURCE_NAMESPACE, SOURCE_PATH, FONT_PATH, FONT_SIZE_PIXELS };
         CmdLineState state = CmdLineState::NONE;
         bool namespaceOnce = false;
