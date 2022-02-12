@@ -7,11 +7,17 @@
 // This define is set in the example .vcxproj file and need to be replicated in your app or by adding it to your imconfig.h file.
 
 #include "imgui.h"
+#include "imgui_amesgames.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <tchar.h>
+
+#include <stdio.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
 
 #ifdef _DEBUG
 #define DX12_ENABLE_DEBUG_LAYER
@@ -57,7 +63,7 @@ FrameContext* WaitForNextFrameResources();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // Main code
-int main(int, char**)
+int main(int argc, char** argv)
 {
     // Create application window
     //ImGui_ImplWin32_EnableDpiAwareness();
@@ -121,6 +127,106 @@ int main(int, char**)
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
+
+    ImGui::Amesgames::LoadFont(13.0f);
+    ImGui::Amesgames::StyleColors();
+
+    // Load TTF Fonts from the command-line and set up source file generation data.
+    if (argc > 1)
+    {
+        // Always load default font
+        io.Fonts->AddFontDefault();
+
+        enum class CmdLineState { NONE, SOURCE_NAMESPACE, SOURCE_PATH, FONT_PATH, FONT_SIZE_PIXELS };
+        CmdLineState state = CmdLineState::NONE;
+        bool namespaceOnce = false;
+        bool sourcePathOnce = false;
+        char fontPath[1024] = "";
+        float fontSizePixels;
+        for (int i = 1; i < argc; i++) {
+            switch (state)
+            {
+                case CmdLineState::NONE:
+                {
+                    if(0 == _stricmp(argv[i], "--source-namespace") || 0 == _stricmp(argv[i], "-n"))
+                    {
+                        if (namespaceOnce)
+                            fprintf(stderr, "Source namespace argument (--source-namespace, -n) is expected only once; overridding with the next occurrence\n");
+                        namespaceOnce = true;
+                        state = CmdLineState::SOURCE_NAMESPACE;
+                    }
+                    else if (0 == _stricmp(argv[i], "--source-path") || 0 == _stricmp(argv[i], "-p"))
+                    {
+                        if (sourcePathOnce)
+                            fprintf(stderr, "Source path argument (--source-path, -s) is expected only once; overridding with the next occurrence\n");
+                        sourcePathOnce = true;
+                        state = CmdLineState::SOURCE_PATH;
+                    }
+                    else if (0 == _stricmp(argv[i], "--font") || 0 == _stricmp(argv[i], "-f"))
+                        state = CmdLineState::FONT_PATH;
+                    else if (0 == _stricmp(argv[i], "--help") || 0 == _stricmp(argv[i], "-h"))
+                    {
+                        fprintf(stderr, "\n");
+                        fprintf(stderr, "Usage: %s [options]\n", argv[0]);
+                        fprintf(stderr, "\n");
+                        fprintf(stderr, "Example:\n");
+                        fprintf(stderr, "\t%s -n TestName -p imgui_testpath -f misc/fonts/Roboto-Medium.ttf 16\n", argv[0]);
+                        fprintf(stderr, "\n");
+                        fprintf(stderr, "options:\n");
+                        fprintf(stderr, "--source-namespace, -n <namespace>:\tThe C++ source code namespace for the font and style config.\n");
+                        fprintf(stderr, "--source-path, -p <path>:\t\tThe C++ source code file path for the font and style config.A pair of paths is created with extensions .h and .cpp.\n");
+                        fprintf(stderr, "--font, -f <path> <pixel size>:\t\tThe TTF file path for a font to be loaded, plus the pixel size it should be configured and rendered at.\n");
+                        fprintf(stderr, "\n");
+                        return 0;
+                    }
+                    else
+                        fprintf(stderr, "Unknown argument \"%s\".\n", argv[i]);
+                }
+                break;
+
+                case CmdLineState::SOURCE_NAMESPACE:
+                {
+                    fprintf(stderr, "Using \"%s\" for source namespace.\n", argv[i]);
+                    ImGui::MemFree(io.srcNamespace);
+                    io.srcNamespace = (char*)ImGui::MemAlloc(strlen(argv[i]) + 1);
+                    strcpy_s(io.srcNamespace, strlen(argv[i]) + 1, argv[i]);
+                    state = CmdLineState::NONE;
+                }
+                break;
+
+                case CmdLineState::SOURCE_PATH:
+                {
+                    fprintf(stderr, "Using \"%s\" for source path.\n", argv[i]);
+                    ImGui::MemFree(io.srcPath);
+                    io.srcPath = (char*)ImGui::MemAlloc(strlen(argv[i]) + 1);
+                    strcpy_s(io.srcPath, strlen(argv[i]) + 1, argv[i]);
+                    state = CmdLineState::NONE;
+                }
+                break;
+
+                case CmdLineState::FONT_PATH:
+                {
+                    strncpy_s(fontPath, sizeof(fontPath), argv[i], sizeof(fontPath) - 1);
+                    state = CmdLineState::FONT_SIZE_PIXELS;
+                }
+                break;
+
+                case CmdLineState::FONT_SIZE_PIXELS:
+                {
+                    fontSizePixels = (float)std::atof(argv[i]);
+                    if (isnan(fontSizePixels) || isinf(fontSizePixels) || fontSizePixels < 1.0f)
+                    {
+                        fprintf(stderr, "Invalid font size in pixels \"%f\" for \"%s\". Using default value.\n", fontSizePixels, fontPath);
+                        fontSizePixels = 13.0f;
+                    }
+                    fprintf(stderr, "Attempting to load Font from TTF file \"%s\" with size in pixels \"%f\"\n", fontPath, fontSizePixels);
+                    io.Fonts->AddFontFromFileTTF(fontPath, fontSizePixels);
+                    state = CmdLineState::NONE;
+                }
+                break;
+            }
+        }
+    }
 
     // Our state
     bool show_demo_window = true;

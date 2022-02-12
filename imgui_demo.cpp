@@ -77,6 +77,7 @@ Index of this file:
 #endif
 
 #include "imgui.h"
+#include "imgui_internal.h" // ImGui::GetDefaultFont
 #ifndef IMGUI_DISABLE
 
 // System includes
@@ -90,6 +91,7 @@ Index of this file:
 #else
 #include <stdint.h>         // intptr_t
 #endif
+#include <string.h>         // strrchr
 
 // Visual Studio warnings
 #ifdef _MSC_VER
@@ -101,25 +103,25 @@ Index of this file:
 // Clang/GCC warnings with -Weverything
 #if defined(__clang__)
 #if __has_warning("-Wunknown-warning-option")
-#pragma clang diagnostic ignored "-Wunknown-warning-option"         // warning: unknown warning group 'xxx'                     // not all warnings are known by all Clang versions and they tend to be rename-happy.. so ignoring warnings triggers new warnings on some configuration. Great!
+#pragma clang diagnostic ignored "-Wunknown-warning-option"     // warning: unknown warning group 'xxx'                     // not all warnings are known by all Clang versions and they tend to be rename-happy.. so ignoring warnings triggers new warnings on some configuration. Great!
 #endif
-#pragma clang diagnostic ignored "-Wunknown-pragmas"                // warning: unknown warning group 'xxx'
-#pragma clang diagnostic ignored "-Wold-style-cast"                 // warning: use of old-style cast                           // yes, they are more terse.
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"        // warning: 'xx' is deprecated: The POSIX name for this..   // for strdup used in demo code (so user can copy & paste the code)
-#pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"       // warning: cast to 'void *' from smaller integer type
-#pragma clang diagnostic ignored "-Wformat-security"                // warning: format string is not a string literal
-#pragma clang diagnostic ignored "-Wexit-time-destructors"          // warning: declaration requires an exit-time destructor    // exit-time destruction order is undefined. if MemFree() leads to users code that has been disabled before exit it might cause problems. ImGui coding style welcomes static/globals.
-#pragma clang diagnostic ignored "-Wunused-macros"                  // warning: macro is not used                               // we define snprintf/vsnprintf on Windows so they are available, but not always used.
+#pragma clang diagnostic ignored "-Wunknown-pragmas"    // warning: unknown warning group 'xxx'
+#pragma clang diagnostic ignored "-Wold-style-cast"     // warning: use of old-style cast                           // yes, they are more terse.
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"    // warning: 'xx' is deprecated: The POSIX name for this..   // for strdup used in demo code (so user can copy & paste the code)
+#pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"   // warning: cast to 'void *' from smaller integer type
+#pragma clang diagnostic ignored "-Wformat-security"    // warning: format string is not a string literal
+#pragma clang diagnostic ignored "-Wexit-time-destructors"      // warning: declaration requires an exit-time destructor    // exit-time destruction order is undefined. if MemFree() leads to users code that has been disabled before exit it might cause problems. ImGui coding style welcomes static/globals.
+#pragma clang diagnostic ignored "-Wunused-macros"      // warning: macro is not used                               // we define snprintf/vsnprintf on Windows so they are available, but not always used.
 #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"  // warning: zero as null pointer constant                   // some standard header variations use #define NULL 0
-#pragma clang diagnostic ignored "-Wdouble-promotion"               // warning: implicit conversion from 'float' to 'double' when passing argument to function  // using printf() is a misery with this as C++ va_arg ellipsis changes float to double.
-#pragma clang diagnostic ignored "-Wreserved-id-macro"              // warning: macro name is a reserved identifier
+#pragma clang diagnostic ignored "-Wdouble-promotion"           // warning: implicit conversion from 'float' to 'double' when passing argument to function  // using printf() is a misery with this as C++ va_arg ellipsis changes float to double.
+#pragma clang diagnostic ignored "-Wreserved-id-macro"          // warning: macro name is a reserved identifier
 #pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"  // warning: implicit conversion from 'xxx' to 'float' may lose precision
 #elif defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wpragmas"                  // warning: unknown option after '#pragma GCC diagnostic' kind
-#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"      // warning: cast to pointer from integer of different size
-#pragma GCC diagnostic ignored "-Wformat-security"          // warning: format string is not a string literal (potentially insecure)
-#pragma GCC diagnostic ignored "-Wdouble-promotion"         // warning: implicit conversion from 'float' to 'double' when passing argument to function
-#pragma GCC diagnostic ignored "-Wconversion"               // warning: conversion to 'xxxx' from 'xxxx' may alter its value
+#pragma GCC diagnostic ignored "-Wpragmas"      // warning: unknown option after '#pragma GCC diagnostic' kind
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"  // warning: cast to pointer from integer of different size
+#pragma GCC diagnostic ignored "-Wformat-security"      // warning: format string is not a string literal (potentially insecure)
+#pragma GCC diagnostic ignored "-Wdouble-promotion"     // warning: implicit conversion from 'float' to 'double' when passing argument to function
+#pragma GCC diagnostic ignored "-Wconversion"           // warning: conversion to 'xxxx' from 'xxxx' may alter its value
 #pragma GCC diagnostic ignored "-Wmisleading-indentation"   // [__GNUC__ >= 6] warning: this 'if' clause does not guard this statement      // GCC 6.0+ only. See #883 on GitHub.
 #endif
 
@@ -234,7 +236,7 @@ void ImGui::ShowUserGuide()
 	ImGui::BulletText("CTRL+Tab to select a window.");
 	if (io.FontAllowUserScaling)
         ImGui::BulletText("CTRL+Mouse Wheel to zoom window contents.");
-    ImGui::BulletText("While inputing text:\n");
+    ImGui::BulletText("While inputing text:" IM_NEWLINE);
     ImGui::Indent();
     ImGui::BulletText("CTRL+Left/Right to word jump.");
     ImGui::BulletText("CTRL+A or double-click to select all.");
@@ -802,7 +804,7 @@ static void ShowDemoWindowWidgets()
                 "Click on the color square to open a color picker.\n"
                 "Click and hold to use drag and drop.\n"
                 "Right-click on the color square to show options.\n"
-                "CTRL+click on individual component to input value.\n");
+                "CTRL+click on individual component to input value." IM_NEWLINE);
 
             ImGui::ColorEdit4("color 2", col2);
         }
@@ -1437,7 +1439,7 @@ static void ShowDemoWindowWidgets()
         {
             static char password[64] = "password123";
             ImGui::InputText("password", password, IM_ARRAYSIZE(password), ImGuiInputTextFlags_Password);
-            ImGui::SameLine(); HelpMarker("Display all characters as '*'.\nDisable clipboard cut and copy.\nDisable logging.\n");
+            ImGui::SameLine(); HelpMarker("Display all characters as '*'.\nDisable clipboard cut and copy.\nDisable logging." IM_NEWLINE);
             ImGui::InputTextWithHint("password (w/ hint)", "<password>", password, IM_ARRAYSIZE(password), ImGuiInputTextFlags_Password);
             ImGui::InputText("password (clear)", password, IM_ARRAYSIZE(password));
             ImGui::TreePop();
@@ -1795,7 +1797,7 @@ static void ShowDemoWindowWidgets()
         ImGui::Text("Color widget:");
         ImGui::SameLine(); HelpMarker(
             "Click on the color square to open a color picker.\n"
-            "CTRL+click on individual component to input value.\n");
+            "CTRL+click on individual component to input value." IM_NEWLINE);
         ImGui::ColorEdit3("MyColor##1", (float*)&color, misc_flags);
 
         IMGUI_DEMO_MARKER("Widgets/Color/ColorEdit (HSV, with Alpha)");
@@ -3542,7 +3544,7 @@ static void ShowDemoWindowPopups()
 
         if (ImGui::BeginPopupModal("Delete?", NULL, ImGuiWindowFlags_AlwaysAutoResize))
         {
-            ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!\n\n");
+            ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!\n" IM_NEWLINE);
             ImGui::Separator();
 
             //static int unused_i = 0;
@@ -5722,10 +5724,10 @@ static void ShowDemoWindowMisc()
         // You may want to implement a more feature-full filtering scheme in your own application.
         static ImGuiTextFilter filter;
         ImGui::Text("Filter usage:\n"
-                    "  \"\"         display all lines\n"
-                    "  \"xxx\"      display lines containing \"xxx\"\n"
+                    "  \"\"     display all lines\n"
+                    "  \"xxx\"  display lines containing \"xxx\"\n"
                     "  \"xxx,yyy\"  display lines containing \"xxx\" or \"yyy\"\n"
-                    "  \"-xxx\"     hide lines containing \"xxx\"");
+                    "  \"-xxx\" hide lines containing \"xxx\"");
         filter.Draw();
         const char* lines[] = { "aaa1.c", "bbb1.c", "ccc1.c", "aaa2.cpp", "bbb2.cpp", "ccc2.cpp", "abc.h", "hello, world" };
         for (int i = 0; i < IM_ARRAYSIZE(lines); i++)
@@ -5989,7 +5991,7 @@ void ImGui::ShowAboutWindow(bool* p_open)
         if (copy_to_clipboard)
         {
             ImGui::LogToClipboard();
-            ImGui::LogText("```\n"); // Back quotes will make text appears without formatting when pasting on GitHub
+            ImGui::LogText("```" IM_NEWLINE); // Back quotes will make text appears without formatting when pasting on GitHub
         }
 
         ImGui::Text("Dear ImGui %s (%d)", IMGUI_VERSION, IMGUI_VERSION_NUM);
@@ -6116,7 +6118,7 @@ void ImGui::ShowAboutWindow(bool* p_open)
 
         if (copy_to_clipboard)
         {
-            ImGui::LogText("\n```\n");
+            ImGui::LogText("\n```" IM_NEWLINE);
             ImGui::LogFinish();
         }
         ImGui::EndChildFrame();
@@ -6180,6 +6182,17 @@ bool ImGui::ShowStyleSelector(const char* label)
     return false;
 }
 
+// stb_compress* from stb.h - declaration
+typedef unsigned int stb_uint;
+typedef unsigned char stb_uchar;
+stb_uint stb_compress(stb_uchar* out, stb_uchar* in, stb_uint len);
+
+char Encode85Byte(unsigned int x)
+{
+    x = (x % 85) + 35;
+    return (x >= '\\') ? x + 1 : x;
+}
+
 void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 {
     IMGUI_DEMO_MARKER("Tools/Style Editor");
@@ -6197,6 +6210,124 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ref = &ref_saved_style;
 
     ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
+
+    if (ImGui::Button("Export to Source"))
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        int srcPathSize = strlen(io.srcPath);
+        char* srcPath = (char*)ImGui::MemAlloc(srcPathSize + 4 + 1);
+        strcpy_s(srcPath, srcPathSize + 1, io.srcPath);
+        strcpy_s(srcPath + srcPathSize, 5, ".cpp");
+
+        char* hdrPath = (char*)ImGui::MemAlloc(srcPathSize + 2 + 1);
+        strcpy_s(hdrPath, srcPathSize + 1, io.srcPath);
+        strcpy_s(hdrPath + srcPathSize, 3, ".h");
+
+        const char* back = strrchr(io.srcPath, '\\');
+        const char* forward = strrchr(io.srcPath, '/');
+        int backIdx = back ? back - io.srcPath : -1;
+        int forwardIdx = forward ? forward - io.srcPath : -1;
+        int lastSlashIdx = forwardIdx > backIdx ? forwardIdx : backIdx;
+
+        FILE* out = fopen(srcPath, "wt");
+        FILE* out_hdr = fopen(hdrPath, "wt");
+        if (!out || !out_hdr)
+        {
+            if(!out)
+                fprintf(stderr, "Could not open source path destination file \"%s\" for writing.\n", srcPath);
+            if (!out_hdr)
+                fprintf(stderr, "Could not open source header path destination file \"%s\" for writing.\n", hdrPath);
+        }
+        else
+        {
+            ImFont* font = ImGui::GetDefaultFont();
+
+            fprintf(out_hdr, "#pragma once\n");
+            fprintf(out_hdr, "\n");
+            fprintf(out_hdr, "namespace ImGui {\n");
+            fprintf(out_hdr, "    namespace %s {\n", io.srcNamespace);
+            fprintf(out_hdr, "        void LoadFont(float size);\n");
+            fprintf(out_hdr, "\n");
+            fprintf(out_hdr, "        void StyleColors();\n");
+            fprintf(out_hdr, "    }\n");
+            fprintf(out_hdr, "}\n");
+
+            char* data = (char*)font->ConfigData->FontData;
+            int data_sz = font->ConfigData->FontDataSize;
+            bool use_compression = true;
+
+            // Compress
+            int maxlen = data_sz + 512 + (data_sz >> 2) + sizeof(int); // total guess
+            char* compressed = use_compression ? new char[maxlen] : data;
+            int compressed_sz = use_compression ? stb_compress((stb_uchar*)compressed, (stb_uchar*)data, data_sz) : data_sz;
+            if (use_compression)
+                memset(compressed + compressed_sz, 0, maxlen - compressed_sz);
+
+            // Output font as Base85 encoded
+            const char* compressed_str = use_compression ? "compressed_" : "";
+
+            fprintf(out, "#include \"%s.h\"\n", io.srcPath + (lastSlashIdx + 1));
+            fprintf(out, "\n");
+            fprintf(out, "#include \"imgui.h\"\n");
+            fprintf(out, "\n");
+            fprintf(out, "namespace ImGui {\n");
+            fprintf(out, "    namespace %s {\n", io.srcNamespace);
+            fprintf(out, "        // %s\n", font->GetDebugName());
+            fprintf(out, "        extern const char %s_%sdata_base85[%d+1]; // defined later in the file\n", "font", compressed_str, (int)((compressed_sz + 3) / 4) * 5);
+            fprintf(out, "\n");
+            fprintf(out, "        void LoadFont(float size) {\n");
+            fprintf(out, "            ImGuiIO& io = ImGui::GetIO();\n");
+            fprintf(out, "            ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(%s_%sdata_base85, size);\n", "font", compressed_str);
+            fprintf(out, "            assert(font != nullptr);\n");
+            fprintf(out, "            io.FontDefault = font;\n");
+            fprintf(out, "        }\n");
+            fprintf(out, "\n");
+            fprintf(out, "        void StyleColors() {\n");
+            fprintf(out, "            ImVec4* colors = ImGui::GetStyle().Colors;\n");
+            for (int i = 0; i < ImGuiCol_COUNT; i++)
+            {
+                const ImVec4& col = style.Colors[i];
+                const char* name = ImGui::GetStyleColorName(i);
+                fprintf(out, "            colors[ImGuiCol_%s]%*s= ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);\n",
+                    name, 23 - (int)strlen(name), "", col.x, col.y, col.z, col.w);
+            }
+            fprintf(out, "        }\n");
+            fprintf(out, "\n");
+
+            //bool use_base85_encoding = true;
+            //if (use_base85_encoding)
+            {
+                fprintf(out, "        const char %s_%sdata_base85[%d+1] =\n", "font", compressed_str, (int)((compressed_sz + 3) / 4) * 5);
+                fprintf(out, "            \"");
+                char prev_c = 0;
+                for (int src_i = 0; src_i < compressed_sz; src_i += 4)
+                {
+                    // This is made a little more complicated by the fact that ??X sequences are interpreted as trigraphs by old C/C++ compilers. So we need to escape pairs of ??.
+                    unsigned int d = *(unsigned int*)(compressed + src_i);
+                    for (unsigned int n5 = 0; n5 < 5; n5++, d /= 85)
+                    {
+                        char c = Encode85Byte(d);
+                        fprintf(out, (c == '?' && prev_c == '?') ? "\\%c" : "%c", c);
+                        prev_c = c;
+                    }
+                    if ((src_i % 112) == 112 - 4)
+                    {
+                        fprintf(out, "\"\n");
+                        fprintf(out, "            \"");
+                    }
+                }
+                fprintf(out, "\";\n");
+                fprintf(out, "    }\n");
+                fprintf(out, "}\n");
+            }
+
+            fclose(out_hdr);
+            fclose(out);
+        }
+        ImGui::MemFree(hdrPath);
+        ImGui::MemFree(srcPath);
+    }
 
     if (ImGui::ShowStyleSelector("Colors##Selector"))
         ref_saved_style = style;
@@ -6859,7 +6990,7 @@ struct ExampleAppConsole
                     }
 
                     // List matches
-                    AddLog("Possible matches:\n");
+                    AddLog("Possible matches:" IM_NEWLINE);
                     for (int i = 0; i < candidates.Size; i++)
                         AddLog("- %s\n", candidates[i]);
                 }
@@ -8207,5 +8338,264 @@ void ImGui::ShowUserGuide() {}
 void ImGui::ShowStyleEditor(ImGuiStyle*) {}
 
 #endif
+
+// stb_compress* from stb.h - definition
+
+////////////////////           compressor         ///////////////////////
+
+static stb_uint stb_adler32(stb_uint adler32, stb_uchar* buffer, stb_uint buflen)
+{
+    const unsigned long ADLER_MOD = 65521;
+    unsigned long s1 = adler32 & 0xffff, s2 = adler32 >> 16;
+    unsigned long blocklen, i;
+
+    blocklen = buflen % 5552;
+    while (buflen) {
+        for (i = 0; i + 7 < blocklen; i += 8) {
+            s1 += buffer[0], s2 += s1;
+            s1 += buffer[1], s2 += s1;
+            s1 += buffer[2], s2 += s1;
+            s1 += buffer[3], s2 += s1;
+            s1 += buffer[4], s2 += s1;
+            s1 += buffer[5], s2 += s1;
+            s1 += buffer[6], s2 += s1;
+            s1 += buffer[7], s2 += s1;
+
+            buffer += 8;
+        }
+
+        for (; i < blocklen; ++i)
+            s1 += *buffer++, s2 += s1;
+
+        s1 %= ADLER_MOD, s2 %= ADLER_MOD;
+        buflen -= blocklen;
+        blocklen = 5552;
+    }
+    return (s2 << 16) + s1;
+}
+
+static unsigned int stb_matchlen(stb_uchar* m1, stb_uchar* m2, stb_uint maxlen)
+{
+    stb_uint i;
+    for (i = 0; i < maxlen; ++i)
+        if (m1[i] != m2[i]) return i;
+    return i;
+}
+
+// simple implementation that just takes the source data in a big block
+
+static stb_uchar* stb__out;
+static FILE* stb__outfile;
+static stb_uint   stb__outbytes;
+
+static void stb__write(unsigned char v)
+{
+    fputc(v, stb__outfile);
+    ++stb__outbytes;
+}
+
+//#define stb_out(v)    (stb__out ? *stb__out++ = (stb_uchar) (v) : stb__write((stb_uchar) (v)))
+#define stb_out(v)    do { if (stb__out) *stb__out++ = (stb_uchar) (v); else stb__write((stb_uchar) (v)); } while (0)
+
+static void stb_out2(stb_uint v) { stb_out(v >> 8); stb_out(v); }
+static void stb_out3(stb_uint v) { stb_out(v >> 16); stb_out(v >> 8); stb_out(v); }
+static void stb_out4(stb_uint v) { stb_out(v >> 24); stb_out(v >> 16); stb_out(v >> 8); stb_out(v); }
+
+static void outliterals(stb_uchar* in, int numlit)
+{
+    while (numlit > 65536) {
+        outliterals(in, 65536);
+        in += 65536;
+        numlit -= 65536;
+    }
+
+    if (numlit == 0);
+    else if (numlit <= 32)    stb_out(0x000020 + numlit - 1);
+    else if (numlit <= 2048)    stb_out2(0x000800 + numlit - 1);
+    else /*  numlit <= 65536) */ stb_out3(0x070000 + numlit - 1);
+
+    if (stb__out) {
+        memcpy(stb__out, in, numlit);
+        stb__out += numlit;
+    }
+    else
+        fwrite(in, 1, numlit, stb__outfile);
+}
+
+static int stb__window = 0x40000; // 256K
+
+static int stb_not_crap(int best, int dist)
+{
+    return   ((best > 2 && dist <= 0x00100)
+        || (best > 5 && dist <= 0x04000)
+        || (best > 7 && dist <= 0x80000));
+}
+
+static  stb_uint stb__hashsize = 32768;
+
+// note that you can play with the hashing functions all you
+// want without needing to change the decompressor
+#define stb__hc(q,h,c)      (((h) << 7) + ((h) >> 25) + q[c])
+#define stb__hc2(q,h,c,d)   (((h) << 14) + ((h) >> 18) + (q[c] << 7) + q[d])
+#define stb__hc3(q,c,d,e)   ((q[c] << 14) + (q[d] << 7) + q[e])
+
+static unsigned int stb__running_adler;
+
+static int stb_compress_chunk(stb_uchar* history,
+    stb_uchar* start,
+    stb_uchar* end,
+    int length,
+    int* pending_literals,
+    stb_uchar** chash,
+    stb_uint mask)
+{
+    (void)history;
+    int window = stb__window;
+    stb_uint match_max;
+    stb_uchar* lit_start = start - *pending_literals;
+    stb_uchar* q = start;
+
+#define STB__SCRAMBLE(h)   (((h) + ((h) >> 16)) & mask)
+
+    // stop short of the end so we don't scan off the end doing
+    // the hashing; this means we won't compress the last few bytes
+    // unless they were part of something longer
+    while (q < start + length && q + 12 < end) {
+        int m;
+        stb_uint h1, h2, h3, h4, h;
+        stb_uchar* t;
+        int best = 2, dist = 0;
+
+        if (q + 65536 > end)
+            match_max = end - q;
+        else
+            match_max = 65536;
+
+#define stb__nc(b,d)  ((d) <= window && ((b) > 9 || stb_not_crap(b,d)))
+
+#define STB__TRY(t,p)  /* avoid retrying a match we already tried */ \
+    if (p ? dist != q-t : 1)                             \
+    if ((m = stb_matchlen(t, q, match_max)) > best)     \
+    if (stb__nc(m,q-(t)))                                \
+    best = m, dist = q - (t)
+
+        // rather than search for all matches, only try 4 candidate locations,
+        // chosen based on 4 different hash functions of different lengths.
+        // this strategy is inspired by LZO; hashing is unrolled here using the
+        // 'hc' macro
+        h = stb__hc3(q, 0, 1, 2); h1 = STB__SCRAMBLE(h);
+        t = chash[h1]; if (t) STB__TRY(t, 0);
+        h = stb__hc2(q, h, 3, 4); h2 = STB__SCRAMBLE(h);
+        h = stb__hc2(q, h, 5, 6);        t = chash[h2]; if (t) STB__TRY(t, 1);
+        h = stb__hc2(q, h, 7, 8); h3 = STB__SCRAMBLE(h);
+        h = stb__hc2(q, h, 9, 10);        t = chash[h3]; if (t) STB__TRY(t, 1);
+        h = stb__hc2(q, h, 11, 12); h4 = STB__SCRAMBLE(h);
+        t = chash[h4]; if (t) STB__TRY(t, 1);
+
+        // because we use a shared hash table, can only update it
+        // _after_ we've probed all of them
+        chash[h1] = chash[h2] = chash[h3] = chash[h4] = q;
+
+        if (best > 2)
+            assert(dist > 0);
+
+        // see if our best match qualifies
+        if (best < 3) { // fast path literals
+            ++q;
+        }
+        else if (best > 2 && best <= 0x80 && dist <= 0x100) {
+            outliterals(lit_start, q - lit_start); lit_start = (q += best);
+            stb_out(0x80 + best - 1);
+            stb_out(dist - 1);
+        }
+        else if (best > 5 && best <= 0x100 && dist <= 0x4000) {
+            outliterals(lit_start, q - lit_start); lit_start = (q += best);
+            stb_out2(0x4000 + dist - 1);
+            stb_out(best - 1);
+        }
+        else if (best > 7 && best <= 0x100 && dist <= 0x80000) {
+            outliterals(lit_start, q - lit_start); lit_start = (q += best);
+            stb_out3(0x180000 + dist - 1);
+            stb_out(best - 1);
+        }
+        else if (best > 8 && best <= 0x10000 && dist <= 0x80000) {
+            outliterals(lit_start, q - lit_start); lit_start = (q += best);
+            stb_out3(0x100000 + dist - 1);
+            stb_out2(best - 1);
+        }
+        else if (best > 9 && dist <= 0x1000000) {
+            if (best > 65536) best = 65536;
+            outliterals(lit_start, q - lit_start); lit_start = (q += best);
+            if (best <= 0x100) {
+                stb_out(0x06);
+                stb_out3(dist - 1);
+                stb_out(best - 1);
+            }
+            else {
+                stb_out(0x04);
+                stb_out3(dist - 1);
+                stb_out2(best - 1);
+            }
+        }
+        else {  // fallback literals if no match was a balanced tradeoff
+            ++q;
+        }
+    }
+
+    // if we didn't get all the way, add the rest to literals
+    if (q - start < length)
+        q = start + length;
+
+    // the literals are everything from lit_start to q
+    *pending_literals = (q - lit_start);
+
+    stb__running_adler = stb_adler32(stb__running_adler, start, q - start);
+    return q - start;
+}
+
+static int stb_compress_inner(stb_uchar* input, stb_uint length)
+{
+    int literals = 0;
+    stb_uint len, i;
+
+    stb_uchar** chash;
+    chash = (stb_uchar**)malloc(stb__hashsize * sizeof(stb_uchar*));
+    if (chash == NULL) return 0; // failure
+    for (i = 0; i < stb__hashsize; ++i)
+        chash[i] = NULL;
+
+    // stream signature
+    stb_out(0x57); stb_out(0xbc);
+    stb_out2(0);
+
+    stb_out4(0);       // 64-bit length requires 32-bit leading 0
+    stb_out4(length);
+    stb_out4(stb__window);
+
+    stb__running_adler = 1;
+
+    len = stb_compress_chunk(input, input, input + length, length, &literals, chash, stb__hashsize - 1);
+    assert(len == length);
+
+    outliterals(input + length - literals, literals);
+
+    free(chash);
+
+    stb_out2(0x05fa); // end opcode
+
+    stb_out4(stb__running_adler);
+
+    return 1; // success
+}
+
+stb_uint stb_compress(stb_uchar* out, stb_uchar* input, stb_uint length)
+{
+    stb__out = out;
+    stb__outfile = NULL;
+
+    stb_compress_inner(input, length);
+
+    return stb__out - out;
+}
 
 #endif // #ifndef IMGUI_DISABLE

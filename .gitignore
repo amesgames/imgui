@@ -25,6 +25,7 @@ ipch
 *.suo
 *.VC.db
 *.VC.VC.opendb
+enc_temp_folder/
 
 ## Commonly used CMake directories
 /build*/
