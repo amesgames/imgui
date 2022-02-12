@@ -6,13 +6,24 @@
 
 namespace ImGui {
     namespace Amesgames {
-        // Roboto-Medium.ttf, 16px
+        // Roboto-Medium.ttf
         extern const char font_compressed_data_base85[144680+1]; // defined later in the file
 
         void LoadFont(float size) {
             ImGuiIO& io = ImGui::GetIO();
             ImFontConfig font_cfg;
             ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "Roboto-Medium.ttf, %dpx", (int)size);
+            font_cfg.OversampleH = 3;
+            font_cfg.OversampleV = 1;
+            font_cfg.PixelSnapH = false;
+            font_cfg.GlyphExtraSpacing.x = 0.000000f;
+            font_cfg.GlyphExtraSpacing.y = 0.000000f;
+            font_cfg.GlyphOffset.x = 0.000000f;
+            font_cfg.GlyphOffset.y = 0.000000f;
+            font_cfg.GlyphMinAdvanceX = 0.000000f;
+            font_cfg.GlyphMaxAdvanceX = 340282346638528859811704183484516925440.000000f;
+            font_cfg.RasterizerMultiply = 1.000000f;
+            font_cfg.EllipsisChar = 65535;
             ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(font_compressed_data_base85, size, &font_cfg);
             assert(font != nullptr);
             io.FontDefault = font;

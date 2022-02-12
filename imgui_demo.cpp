@@ -6279,13 +6279,48 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             fprintf(out, "\n");
             fprintf(out, "namespace ImGui {\n");
             fprintf(out, "    namespace %s {\n", io.srcNamespace);
-            fprintf(out, "        // %s\n", font->GetDebugName());
+            fprintf(out, "        // %.*s\n", commaDist, font->ConfigData->Name);
             fprintf(out, "        extern const char %s_%sdata_base85[%d+1]; // defined later in the file\n", "font", compressed_str, (int)((compressed_sz + 3) / 4) * 5);
             fprintf(out, "\n");
             fprintf(out, "        void LoadFont(float size) {\n");
             fprintf(out, "            ImGuiIO& io = ImGui::GetIO();\n");
             fprintf(out, "            ImFontConfig font_cfg;\n");
             fprintf(out, "            ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), \"%.*s, %%dpx\", (int)size);\n", commaDist, font->ConfigData->Name);
+            fprintf(out, "            font_cfg.OversampleH = %d;\n", font->ConfigData->OversampleH);
+            fprintf(out, "            font_cfg.OversampleV = %d;\n", font->ConfigData->OversampleV);
+            fprintf(out, "            font_cfg.PixelSnapH = %s;\n", font->ConfigData->PixelSnapH ? "true" : "false");
+            fprintf(out, "            font_cfg.GlyphExtraSpacing.x = %ff;\n", font->ConfigData->GlyphExtraSpacing.x);
+            fprintf(out, "            font_cfg.GlyphExtraSpacing.y = %ff;\n", font->ConfigData->GlyphExtraSpacing.y);
+            fprintf(out, "            font_cfg.GlyphOffset.x = %ff;\n", font->ConfigData->GlyphOffset.x);
+            fprintf(out, "            font_cfg.GlyphOffset.y = %ff;\n", font->ConfigData->GlyphOffset.y);
+            if (font->ConfigData->GlyphRanges)
+            {
+                int i = 0;
+                while (font->ConfigData->GlyphRanges[i])
+                    i++;
+                i++; // for terminating 0
+                fprintf(out, "            ImWchar* glyph_ranges = (ImWchar*)IM_ALLOC(sizeof(ImWchar) * %d);\n", i);
+                i = 0;
+                while (font->ConfigData->GlyphRanges[i])
+                {
+#ifdef IMGUI_USE_WCHAR32
+                    fprintf(out, "            glyph_ranges[%d] = (ImWchar)%u;\n", i, font->ConfigData->GlyphRanges[i]);
+#else
+                    fprintf(out, "            glyph_ranges[%d] = (ImWchar)%hu;\n", i, font->ConfigData->GlyphRanges[i]);
+#endif
+                    i++;
+                }
+                fprintf(out, "            glyph_ranges[%d] = 0;\n", i);
+                fprintf(out, "            font_cfg.GlyphRanges = glyph_ranges;\n");
+            }
+            fprintf(out, "            font_cfg.GlyphMinAdvanceX = %ff;\n", font->ConfigData->GlyphMinAdvanceX);
+            fprintf(out, "            font_cfg.GlyphMaxAdvanceX = %ff;\n", font->ConfigData->GlyphMaxAdvanceX);
+            fprintf(out, "            font_cfg.RasterizerMultiply = %ff;\n", font->ConfigData->RasterizerMultiply);
+#ifdef IMGUI_USE_WCHAR32
+            fprintf(out, "            font_cfg.EllipsisChar = %u;\n", font->ConfigData->EllipsisChar);
+#else
+            fprintf(out, "            font_cfg.EllipsisChar = %hu;\n", font->ConfigData->EllipsisChar);
+#endif
             fprintf(out, "            ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(%s_%sdata_base85, size, &font_cfg);\n", "font", compressed_str);
             fprintf(out, "            assert(font != nullptr);\n");
             fprintf(out, "            io.FontDefault = font;\n");
