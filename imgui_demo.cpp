@@ -6211,10 +6211,9 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
     ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
 
+    ImGuiIO& io = ImGui::GetIO();
     if (ImGui::Button("Export to Source"))
     {
-        ImGuiIO& io = ImGui::GetIO();
-
         int srcPathSize = strlen(io.srcPath);
         char* srcPath = (char*)ImGui::MemAlloc(srcPathSize + 4 + 1);
         strcpy_s(srcPath, srcPathSize + 1, io.srcPath);
@@ -6367,10 +6366,19 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
             fclose(out_hdr);
             fclose(out);
+
+            fprintf(stderr, "Successfully wrote source header \"%s\" and source \"%s\" destination files.\n", hdrPath, srcPath);
         }
         ImGui::MemFree(hdrPath);
         ImGui::MemFree(srcPath);
     }
+    ImGui::SameLine();
+    HelpMarker(
+        "Causes the .h and .cpp source files to be generated using \n"
+        "the Source Path (--source-path, -p) and Source Namespace \n"
+        "(--source-namespace, -n) configured on the command-line.");
+    ImGui::Text("Source Path: \"%s\"", io.srcPath);
+    ImGui::Text("Source Namespace: \"%s\"", io.srcNamespace);
 
     if (ImGui::ShowStyleSelector("Colors##Selector"))
         ref_saved_style = style;
