@@ -16,3 +16,5 @@ Multiple fonts can be provided.
 The user can then use the **Tools | Style Editor** of the Dear ImGui Demo window to change the default font and the style Colors.
 
 The **Export to Source** button can then be pressed to save the configuration to the source files.
+
+See: [Dear ImGui README](docs/README.md) for more information on Dear ImGui, itself.
