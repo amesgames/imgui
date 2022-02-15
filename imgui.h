@@ -1984,8 +1984,10 @@ struct ImGuiIO
     // Configuration (fill once)                // Default value
     //------------------------------------------------------------------
 
-    char* srcNamespace;                         // = "Amesgames"    // [amesgames] The namespace used for source code generation of font and style info.
-    char* srcPath;                              // = "imgui_amesgames" // [amesgames] The file path used for source code generation of font and style info.
+    char*               srcNamespace;           // = "Amesgames"        // [amesgames] The namespace used for source code generation of font and style info.
+    char*               srcPath;                // = "imgui_amesgames"  // [amesgames] The file path used for source code generation of font and style info.
+    char*               srcColorStyleNames;     // = "Dark\0Light\0"    // [amesgames] Color style names for source code generation of color style info.
+
     ImGuiConfigFlags   ConfigFlags;             // = 0              // See ImGuiConfigFlags_ enum. Set by user/application. Gamepad/keyboard navigation options, etc.
     ImGuiBackendFlags  BackendFlags;            // = 0              // See ImGuiBackendFlags_ enum. Set by backend (imgui_impl_xxx files or custom backend) to communicate features supported by the backend.
     ImVec2      DisplaySize;                    // <unset>          // Main display size, in pixels (generally == GetMainViewport()->Size)

@@ -129,7 +129,7 @@ int main(int argc, char** argv)
     //IM_ASSERT(font != NULL);
 
     ImGui::Amesgames::LoadFont();
-    ImGui::Amesgames::Style();
+    ImGui::Amesgames::SetupStyle();
 
     // Load TTF Fonts from the command-line and set up source file generation data.
     if (argc > 1)

@@ -77,6 +77,7 @@ Index of this file:
 #endif
 
 #include "imgui.h"
+#include "imgui_amesgames.h"
 #include "imgui_internal.h" // ImGui::GetDefaultFont
 #ifndef IMGUI_DISABLE
 
@@ -6194,9 +6195,12 @@ char Encode85Byte(unsigned int x)
 }
 
 // Amesgames "Export to Source" addon that allows designers to save the font and style settings to source code.
-static void ExportToSource()
+static ImGuiStyle* ExportToSource()
 {
     ImGuiIO& io = ImGui::GetIO();
+
+    ImGuiStyle* ref = ImGui::Amesgames::ShowStyleColorsSelector();
+
     if (ImGui::Button("Export to Source"))
     {
         ImGuiStyle& style = ImGui::GetStyle();
@@ -6231,11 +6235,38 @@ static void ExportToSource()
 
             fprintf(out_hdr, "#pragma once\n");
             fprintf(out_hdr, "\n");
+            fprintf(out_hdr, "#include \"imgui.h\"\n");
+            fprintf(out_hdr, "\n");
             fprintf(out_hdr, "namespace ImGui {\n");
             fprintf(out_hdr, "    namespace %s {\n", io.srcNamespace);
+            fprintf(out_hdr, "        /**\n");
+            fprintf(out_hdr, "         * Call these functions from the ImGui application\n");
+            fprintf(out_hdr, "         */\n");
+            fprintf(out_hdr, "\n");
+            fprintf(out_hdr, "        // Call before the first NewFrame at ImGui application initialization.\n");
             fprintf(out_hdr, "        void LoadFont(float size = %ff);\n", font->ConfigData->SizePixels);
             fprintf(out_hdr, "\n");
-            fprintf(out_hdr, "        void Style();\n");
+            fprintf(out_hdr, "        // Call before the first NewFrame at ImGui application initialization.\n");
+            fprintf(out_hdr, "        void SetupStyle();\n");
+            fprintf(out_hdr, "\n");
+            fprintf(out_hdr, "        // Call amy time outside of a frame to change to the Dark style.\n");
+            fprintf(out_hdr, "        void StyleColorsDark(ImGuiStyle* ref = NULL);\n");
+            fprintf(out_hdr, "\n");
+            fprintf(out_hdr, "        // Call amy time outside of a frame to change to the Light style.\n");
+            fprintf(out_hdr, "        void StyleColorsLight(ImGuiStyle* ref = NULL);\n");
+            fprintf(out_hdr, "\n");
+            fprintf(out_hdr, "        /**\n");
+            fprintf(out_hdr, "         * The below functionality is for the demo Style Editor\n");
+            fprintf(out_hdr, "         */\n");
+            fprintf(out_hdr, "\n");
+            fprintf(out_hdr, "        // Call to display the Style Color combo selector.\n");
+            fprintf(out_hdr, "        ImGuiStyle* ShowStyleColorsSelector();\n");
+            fprintf(out_hdr, "\n");
+            fprintf(out_hdr, "        // Call to get the edited Dark style\n");
+            fprintf(out_hdr, "        ImGuiStyle* GetEditedDarkStyle();\n");
+            fprintf(out_hdr, "\n");
+            fprintf(out_hdr, "        // Call to get the edited Light style\n");
+            fprintf(out_hdr, "        ImGuiStyle* GetEditedLightStyle();\n");
             fprintf(out_hdr, "    }\n");
             fprintf(out_hdr, "}\n");
 
@@ -6259,8 +6290,7 @@ static void ExportToSource()
 
             fprintf(out, "#include \"%s.h\"\n", io.srcPath + (lastSlashIdx + 1));
             fprintf(out, "\n");
-            fprintf(out, "#include \"imgui.h\"\n");
-            fprintf(out, "\n");
+            fprintf(out, "#define IMGUI_DEFINE_MATH_OPERATORS\n");
             fprintf(out, "#include \"imgui_internal.h\"\n");
             fprintf(out, "\n");
             fprintf(out, "namespace ImGui {\n");
@@ -6312,8 +6342,27 @@ static void ExportToSource()
             fprintf(out, "            io.FontDefault = font;\n");
             fprintf(out, "        }\n");
             fprintf(out, "\n");
-            fprintf(out, "        void Style() {\n");
+            fprintf(out, "        static int style_idx = 0;\n");
+            fprintf(out, "        static ImVector<ImGuiStyle> styles;\n");
+            fprintf(out, "\n");
+            fprintf(out, "        void SetupStyle() {\n");
+            fprintf(out, "            ImGuiIO& io = ImGui::GetIO();\n");
+            fprintf(out, "\n");
+            fprintf(out, "            if (io.srcColorStyleNames)\n");
+            fprintf(out, "                IM_FREE(io.srcColorStyleNames);\n");
+            fprintf(out, "\n");
+            fprintf(out, "            io.srcColorStyleNames = (char*)IM_ALLOC(sizeof(\"Dark\\0Light\\0\"));\n");
+            fprintf(out, "            strcpy_s(io.srcColorStyleNames, sizeof(\"Dark\\0Light\\0\"), \"Dark\\0Light\\0\");\n");
+            fprintf(out, "\n");
+            fprintf(out, "            styles.resize(2);\n");
+            fprintf(out, "            StyleColorsDark(&styles[0]);\n");
+            fprintf(out, "            StyleColorsLight(&styles[1]);\n");
+            fprintf(out, "\n");
             fprintf(out, "            ImGuiStyle& style = ImGui::GetStyle();\n");
+            fprintf(out, "\n");
+            fprintf(out, "            for (int i = 0; i < ImGuiCol_COUNT; i++)\n");
+            fprintf(out, "                style.Colors[i] = styles[style_idx].Colors[i];\n");
+            fprintf(out, "\n");
             fprintf(out, "            style.Alpha = %ff;\n", style.Alpha);
             fprintf(out, "            style.DisabledAlpha = %ff;\n", style.DisabledAlpha);
             fprintf(out, "            style.WindowPadding.x = %ff;\n", style.WindowPadding.x);
@@ -6390,15 +6439,58 @@ static void ExportToSource()
             fprintf(out, "            style.AntiAliasedFill = %s;\n", style.AntiAliasedFill ? "true" : "false");
             fprintf(out, "            style.CurveTessellationTol = %ff;\n", style.CurveTessellationTol);
             fprintf(out, "            style.CircleTessellationMaxError = %ff;\n", style.CircleTessellationMaxError);
+            fprintf(out, "        }\n");
             fprintf(out, "\n");
-            fprintf(out, "            ImVec4* colors = style.Colors;\n");
+            fprintf(out, "        void StyleColorsDark(ImGuiStyle * ref) {\n");
+            fprintf(out, "            ref = ref ? ref : &ImGui::GetStyle();\n");
+            fprintf(out, "            ImVec4* colors = ref->Colors;\n");
+            fprintf(out, "\n");
+            ImGuiStyle* dark = ImGui::Amesgames::GetEditedDarkStyle();
             for (int i = 0; i < ImGuiCol_COUNT; i++)
             {
-                const ImVec4& col = style.Colors[i];
+                const ImVec4& col = dark->Colors[i];
                 const char* name = ImGui::GetStyleColorName(i);
                 fprintf(out, "            colors[ImGuiCol_%s]%*s = ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);\n",
                     name, 23 - (int)strlen(name), "", col.x, col.y, col.z, col.w);
             }
+            fprintf(out, "        }\n");
+            fprintf(out, "\n");
+            fprintf(out, "        void StyleColorsLight(ImGuiStyle * ref) {\n");
+            fprintf(out, "            ref = ref ? ref : &ImGui::GetStyle();\n");
+            fprintf(out, "            ImVec4* colors = ref->Colors;\n");
+            fprintf(out, "\n");
+            ImGuiStyle* light = ImGui::Amesgames::GetEditedLightStyle();
+            for (int i = 0; i < ImGuiCol_COUNT; i++)
+            {
+                const ImVec4& col = light->Colors[i];
+                const char* name = ImGui::GetStyleColorName(i);
+                fprintf(out, "            colors[ImGuiCol_%s]%*s = ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);\n",
+                    name, 23 - (int)strlen(name), "", col.x, col.y, col.z, col.w);
+            }
+            fprintf(out, "        }\n");
+            fprintf(out, "\n");
+            fprintf(out, "        ImGuiStyle* ShowStyleColorsSelector()\n");
+            fprintf(out, "        {\n");
+            fprintf(out, "            int prev_style_idx = style_idx;\n");
+            fprintf(out, "            if (ImGui::Combo(\"Amesgames Colors##Selector\", &style_idx, \"Dark\\0Light\\0\"))\n");
+            fprintf(out, "            {\n");
+            fprintf(out, "                ImGuiStyle& style = ImGui::GetStyle();\n");
+            fprintf(out, "                for (int i = 0; i < ImGuiCol_COUNT; i++)\n");
+            fprintf(out, "                    styles[prev_style_idx].Colors[i] = style.Colors[i];\n");
+            fprintf(out, "                for (int i = 0; i < ImGuiCol_COUNT; i++)\n");
+            fprintf(out, "                    style.Colors[i] = styles[style_idx].Colors[i];\n");
+            fprintf(out, "            }\n");
+            fprintf(out, "            return &styles[style_idx];\n");
+            fprintf(out, "        }\n");
+            fprintf(out, "\n");
+            fprintf(out, "        ImGuiStyle* GetEditedDarkStyle()\n");
+            fprintf(out, "        {\n");
+            fprintf(out, "            return &styles[0];\n");
+            fprintf(out, "        }\n");
+            fprintf(out, "\n");
+            fprintf(out, "        ImGuiStyle* GetEditedLightStyle()\n");
+            fprintf(out, "        {\n");
+            fprintf(out, "            return &styles[1];\n");
             fprintf(out, "        }\n");
             fprintf(out, "\n");
 
@@ -6444,6 +6536,10 @@ static void ExportToSource()
         "(--source-namespace, -n) configured on the command-line.");
     ImGui::Text("Source Path: \"%s\"", io.srcPath);
     ImGui::Text("Source Namespace: \"%s\"", io.srcNamespace);
+
+    ImGui::Separator();
+
+    return ref;
 }
 
 void ImGui::ShowStyleEditor(ImGuiStyle* ref)
@@ -6464,7 +6560,9 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
     ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
 
-    ExportToSource();
+    ImGuiStyle* exportRef = ExportToSource();
+    if (exportRef)
+        ref = exportRef;
 
     if (ImGui::ShowStyleSelector("Colors##Selector"))
         ref_saved_style = style;
