@@ -9,7 +9,7 @@ namespace ImGui {
          */
 
         // Call before the first NewFrame at ImGui application initialization.
-        void LoadFont(float size = 16.000000f);
+        ImFont* LoadFont(float size = 16.000000f);
 
         // Call before the first NewFrame at ImGui application initialization.
         void SetupStyle();

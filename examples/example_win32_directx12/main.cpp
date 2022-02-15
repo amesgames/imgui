@@ -128,7 +128,20 @@ int main(int argc, char** argv)
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
 
-    ImGui::Amesgames::LoadFont();
+    ImFont* fonts[11];
+    fonts[0] = ImGui::Amesgames::LoadFont(12);
+    fonts[1] = ImGui::Amesgames::LoadFont(14);
+    fonts[2] = ImGui::Amesgames::LoadFont(16);
+    fonts[3] = ImGui::Amesgames::LoadFont(18);
+    fonts[4] = ImGui::Amesgames::LoadFont(20);
+    fonts[5] = ImGui::Amesgames::LoadFont(22);
+    fonts[6] = ImGui::Amesgames::LoadFont(24);
+    fonts[7] = ImGui::Amesgames::LoadFont(26);
+    fonts[8] = ImGui::Amesgames::LoadFont(28);
+    fonts[9] = ImGui::Amesgames::LoadFont(30);
+    fonts[10] = ImGui::Amesgames::LoadFont(32);
+    int font_idx = 5;
+
     ImGui::Amesgames::SetupStyle();
 
     // Load TTF Fonts from the command-line and set up source file generation data.
@@ -255,6 +268,18 @@ int main(int argc, char** argv)
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
+        if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)) {
+            font_idx += (int)io.MouseWheel;
+            if (font_idx < 0)
+                font_idx = 0;
+            else if (font_idx >= IM_ARRAYSIZE(fonts))
+                font_idx = IM_ARRAYSIZE(fonts) - 1;
+        }
+
+        ImGui::PushFont(fonts[font_idx]);
+
+        ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
@@ -291,6 +316,8 @@ int main(int argc, char** argv)
                 show_another_window = false;
             ImGui::End();
         }
+
+        ImGui::PopFont();
 
         // Rendering
         ImGui::Render();

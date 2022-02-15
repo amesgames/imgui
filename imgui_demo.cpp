@@ -320,7 +320,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     // Dear ImGui Apps (accessible from the "Tools" menu)
     static bool show_app_metrics = false;
     static bool show_app_stack_tool = false;
-    static bool show_app_style_editor = false;
+    static bool show_app_style_editor = true;
     static bool show_app_about = false;
 
     if (show_app_metrics)       { ImGui::ShowMetricsWindow(&show_app_metrics); }
@@ -6244,7 +6244,7 @@ static ImGuiStyle* ExportToSource()
             fprintf(out_hdr, "         */\n");
             fprintf(out_hdr, "\n");
             fprintf(out_hdr, "        // Call before the first NewFrame at ImGui application initialization.\n");
-            fprintf(out_hdr, "        void LoadFont(float size = %ff);\n", font->ConfigData->SizePixels);
+            fprintf(out_hdr, "        ImFont* LoadFont(float size = %ff);\n", font->ConfigData->SizePixels);
             fprintf(out_hdr, "\n");
             fprintf(out_hdr, "        // Call before the first NewFrame at ImGui application initialization.\n");
             fprintf(out_hdr, "        void SetupStyle();\n");
@@ -6298,10 +6298,11 @@ static ImGuiStyle* ExportToSource()
             fprintf(out, "        // %.*s\n", commaDist, font->ConfigData->Name);
             fprintf(out, "        extern const char %s_%sdata_base85[%d+1]; // defined later in the file\n", "font", compressed_str, (int)((compressed_sz + 3) / 4) * 5);
             fprintf(out, "\n");
-            fprintf(out, "        void LoadFont(float size) {\n");
+            fprintf(out, "        ImFont* LoadFont(float size) {\n");
             fprintf(out, "            ImGuiIO& io = ImGui::GetIO();\n");
             fprintf(out, "            ImFontConfig font_cfg;\n");
             fprintf(out, "            ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), \"%.*s, %%dpx\", (int)size);\n", commaDist, font->ConfigData->Name);
+            fprintf(out, "\n");
             fprintf(out, "            font_cfg.OversampleH = %d;\n", font->ConfigData->OversampleH);
             fprintf(out, "            font_cfg.OversampleV = %d;\n", font->ConfigData->OversampleV);
             fprintf(out, "            font_cfg.PixelSnapH = %s;\n", font->ConfigData->PixelSnapH ? "true" : "false");
@@ -6339,21 +6340,13 @@ static ImGuiStyle* ExportToSource()
 #endif
             fprintf(out, "            ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(%s_%sdata_base85, size, &font_cfg);\n", "font", compressed_str);
             fprintf(out, "            assert(font != nullptr);\n");
-            fprintf(out, "            io.FontDefault = font;\n");
+            fprintf(out, "            return font;\n");
             fprintf(out, "        }\n");
             fprintf(out, "\n");
             fprintf(out, "        static int style_idx = 0;\n");
             fprintf(out, "        static ImVector<ImGuiStyle> styles;\n");
             fprintf(out, "\n");
             fprintf(out, "        void SetupStyle() {\n");
-            fprintf(out, "            ImGuiIO& io = ImGui::GetIO();\n");
-            fprintf(out, "\n");
-            fprintf(out, "            if (io.srcColorStyleNames)\n");
-            fprintf(out, "                IM_FREE(io.srcColorStyleNames);\n");
-            fprintf(out, "\n");
-            fprintf(out, "            io.srcColorStyleNames = (char*)IM_ALLOC(sizeof(\"Dark\\0Light\\0\"));\n");
-            fprintf(out, "            strcpy_s(io.srcColorStyleNames, sizeof(\"Dark\\0Light\\0\"), \"Dark\\0Light\\0\");\n");
-            fprintf(out, "\n");
             fprintf(out, "            styles.resize(2);\n");
             fprintf(out, "            StyleColorsDark(&styles[0]);\n");
             fprintf(out, "            StyleColorsLight(&styles[1]);\n");
