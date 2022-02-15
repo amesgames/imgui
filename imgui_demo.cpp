@@ -6249,10 +6249,10 @@ static ImGuiStyle* ExportToSource()
             fprintf(out_hdr, "        // Call before the first NewFrame at ImGui application initialization.\n");
             fprintf(out_hdr, "        void SetupStyle();\n");
             fprintf(out_hdr, "\n");
-            fprintf(out_hdr, "        // Call amy time outside of a frame to change to the Dark style.\n");
+            fprintf(out_hdr, "        // Call any time outside of a frame to change to the Dark style.\n");
             fprintf(out_hdr, "        void StyleColorsDark(ImGuiStyle* ref = NULL);\n");
             fprintf(out_hdr, "\n");
-            fprintf(out_hdr, "        // Call amy time outside of a frame to change to the Light style.\n");
+            fprintf(out_hdr, "        // Call any time outside of a frame to change to the Light style.\n");
             fprintf(out_hdr, "        void StyleColorsLight(ImGuiStyle* ref = NULL);\n");
             fprintf(out_hdr, "\n");
             fprintf(out_hdr, "        /**\n");

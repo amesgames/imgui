@@ -14,10 +14,10 @@ namespace ImGui {
         // Call before the first NewFrame at ImGui application initialization.
         void SetupStyle();
 
-        // Call amy time outside of a frame to change to the Dark style.
+        // Call any time outside of a frame to change to the Dark style.
         void StyleColorsDark(ImGuiStyle* ref = NULL);
 
-        // Call amy time outside of a frame to change to the Light style.
+        // Call any time outside of a frame to change to the Light style.
         void StyleColorsLight(ImGuiStyle* ref = NULL);
 
         /**
