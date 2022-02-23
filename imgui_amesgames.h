@@ -8,8 +8,11 @@ namespace ImGui {
          * Call these functions from the ImGui application
          */
 
+        // Query the default size of the default font.
+        float GetDefaultFontSize();
+
         // Call before the first NewFrame at ImGui application initialization.
-        ImFont* LoadFont(float size = 16.000000f);
+        ImFont* LoadFont(float size = 22.000000f);
 
         // Call before the first NewFrame at ImGui application initialization.
         void SetupStyle();

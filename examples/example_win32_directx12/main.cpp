@@ -129,18 +129,23 @@ int main(int argc, char** argv)
     //IM_ASSERT(font != NULL);
 
     ImFont* fonts[11];
-    fonts[0] = ImGui::Amesgames::LoadFont(12);
-    fonts[1] = ImGui::Amesgames::LoadFont(14);
-    fonts[2] = ImGui::Amesgames::LoadFont(16);
-    fonts[3] = ImGui::Amesgames::LoadFont(18);
-    fonts[4] = ImGui::Amesgames::LoadFont(20);
-    fonts[5] = ImGui::Amesgames::LoadFont(22);
-    fonts[6] = ImGui::Amesgames::LoadFont(24);
-    fonts[7] = ImGui::Amesgames::LoadFont(26);
-    fonts[8] = ImGui::Amesgames::LoadFont(28);
-    fonts[9] = ImGui::Amesgames::LoadFont(30);
-    fonts[10] = ImGui::Amesgames::LoadFont(32);
-    io.FontDefault = fonts[5];
+    const int font_count = IM_ARRAYSIZE(fonts);
+    assert(font_count & 2); // expect an odd number of fonts
+    const int middle = font_count / 2;
+    const float middle_size = ImGui::Amesgames::GetDefaultFontSize();
+
+    // Load middle font using default size
+    fonts[middle] = ImGui::Amesgames::LoadFont(middle_size);
+
+    // Create an equal number of font sizes above and below the middle size, in increments of 2px.
+    for (int i = 1; i <= middle; i++)
+    {
+        const float step_size = i * 2.0f;
+        fonts[middle - i] = ImGui::Amesgames::LoadFont(middle_size - step_size);
+        fonts[middle + i] = ImGui::Amesgames::LoadFont(middle_size + step_size);
+    }
+
+    io.FontDefault = fonts[middle];
     int font_idx = 5;
 
     ImGui::Amesgames::SetupStyle();

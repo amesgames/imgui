@@ -6243,6 +6243,9 @@ static ImGuiStyle* ExportToSource()
             fprintf(out_hdr, "         * Call these functions from the ImGui application\n");
             fprintf(out_hdr, "         */\n");
             fprintf(out_hdr, "\n");
+            fprintf(out_hdr, "        // Query the default size of the default font.\n");
+            fprintf(out_hdr, "        float GetDefaultFontSize();\n");
+            fprintf(out_hdr, "\n");
             fprintf(out_hdr, "        // Call before the first NewFrame at ImGui application initialization.\n");
             fprintf(out_hdr, "        ImFont* LoadFont(float size = %ff);\n", font->ConfigData->SizePixels);
             fprintf(out_hdr, "\n");
@@ -6297,6 +6300,9 @@ static ImGuiStyle* ExportToSource()
             fprintf(out, "    namespace %s {\n", io.srcNamespace);
             fprintf(out, "        // %.*s\n", commaDist, font->ConfigData->Name);
             fprintf(out, "        extern const char %s_%sdata_base85[%d+1]; // defined later in the file\n", "font", compressed_str, (int)((compressed_sz + 3) / 4) * 5);
+            fprintf(out, "\n");
+            fprintf(out, "        float GetDefaultFontSize()\n");
+            fprintf(out, "        { return % ff; }\n", font->ConfigData->SizePixels);
             fprintf(out, "\n");
             fprintf(out, "        ImFont* LoadFont(float size) {\n");
             fprintf(out, "            ImGuiIO& io = ImGui::GetIO();\n");
