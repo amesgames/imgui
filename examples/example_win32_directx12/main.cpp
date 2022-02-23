@@ -146,7 +146,7 @@ int main(int argc, char** argv)
     }
 
     io.FontDefault = fonts[middle];
-    int font_idx = 5;
+    int font_idx = middle;
 
     ImGui::Amesgames::SetupStyle();
 
