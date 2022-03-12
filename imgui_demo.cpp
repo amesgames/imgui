@@ -6207,12 +6207,12 @@ static ImGuiStyle* ExportToSource()
 
         int srcPathSize = strlen(io.srcPath);
         char* srcPath = (char*)ImGui::MemAlloc(srcPathSize + 4 + 1);
-        strcpy_s(srcPath, srcPathSize + 1, io.srcPath);
-        strcpy_s(srcPath + srcPathSize, 5, ".cpp");
+        strncpy(srcPath, io.srcPath, srcPathSize + 1);
+        strncpy(srcPath + srcPathSize, ".cpp", 5);
 
         char* hdrPath = (char*)ImGui::MemAlloc(srcPathSize + 2 + 1);
-        strcpy_s(hdrPath, srcPathSize + 1, io.srcPath);
-        strcpy_s(hdrPath + srcPathSize, 3, ".h");
+        strncpy(hdrPath, io.srcPath, srcPathSize + 1);
+        strncpy(hdrPath + srcPathSize, ".h", 3);
 
         const char* back = strrchr(io.srcPath, '\\');
         const char* forward = strrchr(io.srcPath, '/');

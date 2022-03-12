@@ -4,9 +4,16 @@
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 #include "imgui.h"
+#include "imgui_amesgames.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+
 #include <stdio.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <string.h>
+
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
 #endif
@@ -24,7 +31,7 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-int main(int, char**)
+int main(int argc, char** argv)
 {
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
@@ -103,6 +110,122 @@ int main(int, char**)
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
 
+    ImFont* fonts[11];
+    const int font_count = IM_ARRAYSIZE(fonts);
+    assert(font_count & 2); // expect an odd number of fonts
+    const int middle = font_count / 2;
+    const float middle_size = ImGui::Amesgames::GetDefaultFontSize();
+
+    // Load middle font using default size
+    fonts[middle] = ImGui::Amesgames::LoadFont(middle_size);
+
+    // Create an equal number of font sizes above and below the middle size, in increments of 2px.
+    for (int i = 1; i <= middle; i++)
+    {
+        const float step_size = i * 2.0f;
+        fonts[middle - i] = ImGui::Amesgames::LoadFont(middle_size - step_size);
+        fonts[middle + i] = ImGui::Amesgames::LoadFont(middle_size + step_size);
+    }
+
+    io.FontDefault = fonts[middle];
+    int font_idx = middle;
+
+    ImGui::Amesgames::SetupStyle();
+
+    // Load TTF Fonts from the command-line and set up source file generation data.
+    if (argc > 1)
+    {
+        enum class CmdLineState { NONE, SOURCE_NAMESPACE, SOURCE_PATH, FONT_PATH, FONT_SIZE_PIXELS };
+        CmdLineState state = CmdLineState::NONE;
+        bool namespaceOnce = false;
+        bool sourcePathOnce = false;
+        char fontPath[1024] = "";
+        float fontSizePixels;
+        for (int i = 1; i < argc; i++) {
+            switch (state)
+            {
+                case CmdLineState::NONE:
+                {
+                    if(0 == strcmp(argv[i], "--source-namespace") || 0 == strcmp(argv[i], "-n"))
+                    {
+                        if (namespaceOnce)
+                            fprintf(stderr, "Source namespace argument (--source-namespace, -n) is expected only once; overridding with the next occurrence\n");
+                        namespaceOnce = true;
+                        state = CmdLineState::SOURCE_NAMESPACE;
+                    }
+                    else if (0 == strcmp(argv[i], "--source-path") || 0 == strcmp(argv[i], "-p"))
+                    {
+                        if (sourcePathOnce)
+                            fprintf(stderr, "Source path argument (--source-path, -s) is expected only once; overridding with the next occurrence\n");
+                        sourcePathOnce = true;
+                        state = CmdLineState::SOURCE_PATH;
+                    }
+                    else if (0 == strcmp(argv[i], "--font") || 0 == strcmp(argv[i], "-f"))
+                        state = CmdLineState::FONT_PATH;
+                    else if (0 == strcmp(argv[i], "--help") || 0 == strcmp(argv[i], "-h"))
+                    {
+                        fprintf(stderr, "\n");
+                        fprintf(stderr, "Usage: %s [options]\n", argv[0]);
+                        fprintf(stderr, "\n");
+                        fprintf(stderr, "Example:\n");
+                        fprintf(stderr, "\t%s -n TestName -p imgui_testpath -f misc/fonts/Roboto-Medium.ttf 16\n", argv[0]);
+                        fprintf(stderr, "\n");
+                        fprintf(stderr, "options:\n");
+                        fprintf(stderr, "--source-namespace, -n <namespace>:\tThe C++ source code namespace for the font and style config.\n");
+                        fprintf(stderr, "--source-path, -p <path>:\t\tThe C++ source code file path for the font and style config.A pair of paths is created with extensions .h and .cpp.\n");
+                        fprintf(stderr, "--font, -f <path> <pixel size>:\t\tThe TTF file path for a font to be loaded, plus the pixel size it should be configured and rendered at.\n");
+                        fprintf(stderr, "\n");
+                        return 0;
+                    }
+                    else
+                        fprintf(stderr, "Unknown argument \"%s\".\n", argv[i]);
+                }
+                break;
+
+                case CmdLineState::SOURCE_NAMESPACE:
+                {
+                    fprintf(stderr, "Using \"%s\" for source namespace.\n", argv[i]);
+                    ImGui::MemFree(io.srcNamespace);
+                    io.srcNamespace = (char*)ImGui::MemAlloc(strlen(argv[i]) + 1);
+                    strncpy(io.srcNamespace, argv[i], strlen(argv[i]) + 1);
+                    state = CmdLineState::NONE;
+                }
+                break;
+
+                case CmdLineState::SOURCE_PATH:
+                {
+                    fprintf(stderr, "Using \"%s\" for source path.\n", argv[i]);
+                    ImGui::MemFree(io.srcPath);
+                    io.srcPath = (char*)ImGui::MemAlloc(strlen(argv[i]) + 1);
+                    strncpy(io.srcPath, argv[i], strlen(argv[i]) + 1);
+                    state = CmdLineState::NONE;
+                }
+                break;
+
+                case CmdLineState::FONT_PATH:
+                {
+                    strncpy(fontPath, argv[i], sizeof(fontPath) - 1);
+                    state = CmdLineState::FONT_SIZE_PIXELS;
+                }
+                break;
+
+                case CmdLineState::FONT_SIZE_PIXELS:
+                {
+                    fontSizePixels = (float)std::atof(argv[i]);
+                    if (std::isnan(fontSizePixels) || std::isinf(fontSizePixels) || fontSizePixels < 1.0f)
+                    {
+                        fprintf(stderr, "Invalid font size in pixels \"%f\" for \"%s\". Using default value.\n", fontSizePixels, fontPath);
+                        fontSizePixels = 13.0f;
+                    }
+                    fprintf(stderr, "Attempting to load Font from TTF file \"%s\" with size in pixels \"%f\"\n", fontPath, fontSizePixels);
+                    io.Fonts->AddFontFromFileTTF(fontPath, fontSizePixels);
+                    state = CmdLineState::NONE;
+                }
+                break;
+            }
+        }
+    }
+
     // Our state
     bool show_demo_window = true;
     bool show_another_window = false;
@@ -122,6 +245,18 @@ int main(int, char**)
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+        if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)) {
+            font_idx += (int)io.MouseWheel;
+            if (font_idx < 0)
+                font_idx = 0;
+            else if (font_idx >= IM_ARRAYSIZE(fonts))
+                font_idx = IM_ARRAYSIZE(fonts) - 1;
+        }
+
+        ImGui::PushFont(fonts[font_idx]);
+
+        ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
@@ -159,6 +294,8 @@ int main(int, char**)
                 show_another_window = false;
             ImGui::End();
         }
+
+        ImGui::PopFont();
 
         // Rendering
         ImGui::Render();

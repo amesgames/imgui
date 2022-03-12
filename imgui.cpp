@@ -1137,12 +1137,12 @@ ImGuiIO::ImGuiIO()
     IM_STATIC_ASSERT(IM_ARRAYSIZE(ImGuiIO::MouseDown) == ImGuiMouseButton_COUNT && IM_ARRAYSIZE(ImGuiIO::MouseClicked) == ImGuiMouseButton_COUNT);
 
     // Settings
-    srcNamespace = (char*)IM_ALLOC(sizeof("Amesgames"));
-    strcpy_s(srcNamespace, sizeof("Amesgames"), "Amesgames");
-    srcPath = (char*)IM_ALLOC(sizeof("imgui_amesgames"));
-    strcpy_s(srcPath, sizeof("imgui_amesgames"), "imgui_amesgames");
-    srcColorStyleNames = (char*)IM_ALLOC(sizeof("Dark\0Light\0"));
-    strcpy_s(srcColorStyleNames, sizeof("Dark\0Light\0"), "Dark\0Light\0");
+    srcNamespace = (char*)IM_ALLOC(strlen("Amesgames") + 1);
+    strncpy(srcNamespace, "Amesgames", strlen("Amesgames") + 1);
+    srcPath = (char*)IM_ALLOC(strlen("imgui_amesgames") + 1);
+    strncpy(srcPath, "imgui_amesgames", strlen("imgui_amesgames") + 1);
+    srcColorStyleNames = (char*)IM_ALLOC(strlen("Dark\0Light\0") + 1);
+    strncpy(srcColorStyleNames, "Dark\0Light\0", strlen("Dark\0Light\0") + 1);
 
     ConfigFlags = ImGuiConfigFlags_None;
     BackendFlags = ImGuiBackendFlags_None;
