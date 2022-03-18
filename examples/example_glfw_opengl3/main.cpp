@@ -135,12 +135,15 @@ int main(int argc, char** argv)
     // Load TTF Fonts from the command-line and set up source file generation data.
     if (argc > 1)
     {
-        enum class CmdLineState { NONE, SOURCE_NAMESPACE, SOURCE_PATH, FONT_PATH, FONT_SIZE_PIXELS };
+        enum class CmdLineState { NONE, SOURCE_NAMESPACE, SOURCE_PATH, FONT_PATH, FONT_SIZE_PIXELS, ICON_PATH, ICON_RANGES };
         CmdLineState state = CmdLineState::NONE;
         bool namespaceOnce = false;
         bool sourcePathOnce = false;
         char fontPath[1024] = "";
         float fontSizePixels;
+        ImFont* lastFont = NULL;
+        char iconPath[1024] = "";
+        ImVector<ImWchar> icon_ranges;
         for (int i = 1; i < argc; i++) {
             switch (state)
             {
@@ -162,6 +165,8 @@ int main(int argc, char** argv)
                     }
                     else if (0 == strcmp(argv[i], "--font") || 0 == strcmp(argv[i], "-f"))
                         state = CmdLineState::FONT_PATH;
+                    else if (0 == strcmp(argv[i], "--icon") || 0 == strcmp(argv[i], "-i"))
+                        state = CmdLineState::ICON_PATH;
                     else if (0 == strcmp(argv[i], "--help") || 0 == strcmp(argv[i], "-h"))
                     {
                         fprintf(stderr, "\n");
@@ -174,6 +179,7 @@ int main(int argc, char** argv)
                         fprintf(stderr, "--source-namespace, -n <namespace>:\tThe C++ source code namespace for the font and style config.\n");
                         fprintf(stderr, "--source-path, -p <path>:\t\tThe C++ source code file path for the font and style config.A pair of paths is created with extensions .h and .cpp.\n");
                         fprintf(stderr, "--font, -f <path> <pixel size>:\t\tThe TTF file path for a font to be loaded, plus the pixel size it should be configured and rendered at.\n");
+                        fprintf(stderr, "--icon, -i <path>:\t\tAn optional TTF file path for an icon font to be loaded and merged with the previously specified base font. Must be specified after each font where it is to be rendered.\n");
                         fprintf(stderr, "\n");
                         return 0;
                     }
@@ -218,7 +224,36 @@ int main(int argc, char** argv)
                         fontSizePixels = 13.0f;
                     }
                     fprintf(stderr, "Attempting to load Font from TTF file \"%s\" with size in pixels \"%f\"\n", fontPath, fontSizePixels);
-                    io.Fonts->AddFontFromFileTTF(fontPath, fontSizePixels);
+                    lastFont = io.Fonts->AddFontFromFileTTF(fontPath, fontSizePixels);
+                    state = CmdLineState::NONE;
+                }
+                break;
+
+                case CmdLineState::ICON_PATH:
+                {
+                    if(!lastFont) {
+                        fprintf(stderr, "Attempting to load an icon Font before any base font was loaded, aborting \"%s\"\n", argv[i]);
+                        return -1;
+                    }
+                    strncpy(iconPath, argv[i], sizeof(iconPath) - 1);
+                    state = CmdLineState::ICON_RANGES;
+                }
+                break;
+
+                case CmdLineState::ICON_RANGES:
+                {
+                    icon_ranges.clear();
+                    while(i < argc && argv[i][0] != '-')
+                        icon_ranges.push_back((unsigned short)strtol(argv[i++], NULL, 0));
+                    if(0 != icon_ranges.size() % 2) {
+                        fprintf(stderr, "Glyph ranges has an odd number of values, they must come in pairs. Skipping last value. \"%04x\"\n", icon_ranges.back());
+                        icon_ranges.back() = 0;
+                    }
+                    else
+                        icon_ranges.push_back(0);
+                    fprintf(stderr, "Attempting to load and merge icon Font from TTF file \"%s\"\n", iconPath);
+                    ImFontConfig icons_config; icons_config.MergeMode = true; icons_config.PixelSnapH = true;
+                    io.Fonts->AddFontFromFileTTF(iconPath, fontSizePixels, &icons_config, icon_ranges.Data);
                     state = CmdLineState::NONE;
                 }
                 break;
