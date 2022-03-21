@@ -6273,23 +6273,32 @@ static ImGuiStyle* ExportToSource()
             fprintf(out_hdr, "    }\n");
             fprintf(out_hdr, "}\n");
 
-            char* data = (char*)font->ConfigData->FontData;
-            int data_sz = font->ConfigData->FontDataSize;
-            bool use_compression = true;
-
-            // Compress
-            int maxlen = data_sz + 512 + (data_sz >> 2) + sizeof(int); // total guess
-            char* compressed = use_compression ? new char[maxlen] : data;
-            int compressed_sz = use_compression ? stb_compress((stb_uchar*)compressed, (stb_uchar*)data, data_sz) : data_sz;
-            if (use_compression)
-                memset(compressed + compressed_sz, 0, maxlen - compressed_sz);
-
             // Output font as Base85 encoded
+            const bool use_compression = true;
             const char* compressed_str = use_compression ? "compressed_" : "";
 
-            // Strip the 13px, or whatever size, off of the tail of the font name
-            const char* commaPtr = strrchr(font->ConfigData->Name, ',');
-            int commaDist = commaPtr - font->ConfigData->Name;
+            // Compress all of the fonts
+            ImVector<char*> compressed;
+            compressed.resize(font->ConfigDataCount);
+            ImVector<int> compressed_sz;
+            compressed_sz.resize(font->ConfigDataCount);
+            ImVector<int> commaDist;
+            commaDist.resize(font->ConfigDataCount);
+            for(int i = 0; i < font->ConfigDataCount; i++) {
+                char* data = (char*)font->ConfigData[i].FontData;
+                int data_sz = font->ConfigData[i].FontDataSize;
+
+                // Compress
+                int maxlen = data_sz + 512 + (data_sz >> 2) + sizeof(int); // total guess
+                compressed[i] = use_compression ? new char[maxlen] : data;
+                compressed_sz[i] = use_compression ? stb_compress((stb_uchar*)compressed[i], (stb_uchar*)data, data_sz) : data_sz;
+                if (use_compression)
+                    memset(compressed[i] + compressed_sz[i], 0, maxlen - compressed_sz[i]);
+
+                // Strip the 13px, or whatever size, off of the tail of the font name
+                const char* commaPtr = strrchr(font->ConfigData[i].Name, ',');
+                commaDist[i] = commaPtr - font->ConfigData[i].Name;
+            }
 
             fprintf(out, "#include \"%s.h\"\n", io.srcPath + (lastSlashIdx + 1));
             fprintf(out, "\n");
@@ -6298,54 +6307,63 @@ static ImGuiStyle* ExportToSource()
             fprintf(out, "\n");
             fprintf(out, "namespace ImGui {\n");
             fprintf(out, "    namespace %s {\n", io.srcNamespace);
-            fprintf(out, "        // %.*s\n", commaDist, font->ConfigData->Name);
-            fprintf(out, "        extern const char %s_%sdata_base85[%d+1]; // defined later in the file\n", "font", compressed_str, (int)((compressed_sz + 3) / 4) * 5);
-            fprintf(out, "\n");
+            for(int i = 0; i < font->ConfigDataCount; i++) {
+                fprintf(out, "        // %.*s\n", commaDist[i], font->ConfigData[i].Name);
+                fprintf(out, "        extern const char %s_%sdata_base85_%d[%d+1]; // defined later in the file\n", "font", compressed_str, i, (int)((compressed_sz[i] + 3) / 4) * 5);
+                fprintf(out, "\n");
+            }
             fprintf(out, "        float GetDefaultFontSize()\n");
-            fprintf(out, "        { return % ff; }\n", font->ConfigData->SizePixels);
+            fprintf(out, "        { return % ff; }\n", font->ConfigData->SizePixels); // use the base font
             fprintf(out, "\n");
             fprintf(out, "        ImFont* LoadFont(float size) {\n");
             fprintf(out, "            ImGuiIO& io = ImGui::GetIO();\n");
-            fprintf(out, "            ImFontConfig font_cfg;\n");
-            fprintf(out, "            ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), \"%.*s, %%dpx\", (int)size);\n", commaDist, font->ConfigData->Name);
             fprintf(out, "\n");
-            fprintf(out, "            font_cfg.OversampleH = %d;\n", font->ConfigData->OversampleH);
-            fprintf(out, "            font_cfg.OversampleV = %d;\n", font->ConfigData->OversampleV);
-            fprintf(out, "            font_cfg.PixelSnapH = %s;\n", font->ConfigData->PixelSnapH ? "true" : "false");
-            fprintf(out, "            font_cfg.GlyphExtraSpacing.x = %ff;\n", font->ConfigData->GlyphExtraSpacing.x);
-            fprintf(out, "            font_cfg.GlyphExtraSpacing.y = %ff;\n", font->ConfigData->GlyphExtraSpacing.y);
-            fprintf(out, "            font_cfg.GlyphOffset.x = %ff;\n", font->ConfigData->GlyphOffset.x);
-            fprintf(out, "            font_cfg.GlyphOffset.y = %ff;\n", font->ConfigData->GlyphOffset.y);
-            if (font->ConfigData->GlyphRanges)
-            {
-                int i = 0;
-                while (font->ConfigData->GlyphRanges[i])
-                    i++;
-                i++; // for terminating 0
-                fprintf(out, "            ImWchar* glyph_ranges = (ImWchar*)IM_ALLOC(sizeof(ImWchar) * %d);\n", i);
-                i = 0;
-                while (font->ConfigData->GlyphRanges[i])
+            fprintf(out, "            ImFont* font = NULL;\n");
+            for(int i = 0; i < font->ConfigDataCount; i++) {
+                fprintf(out, "            {\n");
+                fprintf(out, "                ImFontConfig font_cfg;\n");
+                fprintf(out, "                ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), \"%.*s, %%dpx\", (int)size);\n", commaDist[i], font->ConfigData[i].Name);
+                fprintf(out, "                font_cfg.MergeMode = %s;\n", font->ConfigData[i].MergeMode ? "true" : "false");
+                fprintf(out, "                font_cfg.OversampleH = %d;\n", font->ConfigData[i].OversampleH);
+                fprintf(out, "                font_cfg.OversampleV = %d;\n", font->ConfigData[i].OversampleV);
+                fprintf(out, "                font_cfg.PixelSnapH = %s;\n", font->ConfigData[i].PixelSnapH ? "true" : "false");
+                fprintf(out, "                font_cfg.GlyphExtraSpacing.x = %ff;\n", font->ConfigData[i].GlyphExtraSpacing.x);
+                fprintf(out, "                font_cfg.GlyphExtraSpacing.y = %ff;\n", font->ConfigData[i].GlyphExtraSpacing.y);
+                fprintf(out, "                font_cfg.GlyphOffset.x = %ff;\n", font->ConfigData[i].GlyphOffset.x);
+                fprintf(out, "                font_cfg.GlyphOffset.y = %ff;\n", font->ConfigData[i].GlyphOffset.y);
+                if(font->ConfigData[i].GlyphRanges)
                 {
+                    int j = 0;
+                    while (font->ConfigData[i].GlyphRanges[j])
+                        j++;
+                    j++; // for terminating 0
+                    fprintf(out, "                ImWchar* glyph_ranges = (ImWchar*)IM_ALLOC(sizeof(ImWchar) * %d);\n", i);
+                    j = 0;
+                    while (font->ConfigData[i].GlyphRanges[j])
+                    {
 #ifdef IMGUI_USE_WCHAR32
-                    fprintf(out, "            glyph_ranges[%d] = (ImWchar)%u;\n", i, font->ConfigData->GlyphRanges[i]);
+                        fprintf(out, "                glyph_ranges[%d] = (ImWchar)%u;\n", j, font->ConfigData[i].GlyphRanges[j]);
 #else
-                    fprintf(out, "            glyph_ranges[%d] = (ImWchar)%hu;\n", i, font->ConfigData->GlyphRanges[i]);
+                        fprintf(out, "                glyph_ranges[%d] = (ImWchar)%hu;\n", j, font->ConfigData[i].GlyphRanges[j]);
 #endif
-                    i++;
+                        j++;
+                    }
+                    fprintf(out, "                glyph_ranges[%d] = 0;\n", j);
+                    fprintf(out, "                font_cfg.GlyphRanges = glyph_ranges;\n");
                 }
-                fprintf(out, "            glyph_ranges[%d] = 0;\n", i);
-                fprintf(out, "            font_cfg.GlyphRanges = glyph_ranges;\n");
-            }
-            fprintf(out, "            font_cfg.GlyphMinAdvanceX = %ff;\n", font->ConfigData->GlyphMinAdvanceX);
-            fprintf(out, "            font_cfg.GlyphMaxAdvanceX = %ff;\n", font->ConfigData->GlyphMaxAdvanceX);
-            fprintf(out, "            font_cfg.RasterizerMultiply = %ff;\n", font->ConfigData->RasterizerMultiply);
+                fprintf(out, "                font_cfg.GlyphMinAdvanceX = %ff;\n", font->ConfigData[i].GlyphMinAdvanceX);
+                fprintf(out, "                font_cfg.GlyphMaxAdvanceX = %ff;\n", font->ConfigData[i].GlyphMaxAdvanceX);
+                fprintf(out, "                font_cfg.RasterizerMultiply = %ff;\n", font->ConfigData[i].RasterizerMultiply);
 #ifdef IMGUI_USE_WCHAR32
-            fprintf(out, "            font_cfg.EllipsisChar = %u;\n", font->ConfigData->EllipsisChar);
+                fprintf(out, "                font_cfg.EllipsisChar = %u;\n", font->ConfigData[i].EllipsisChar);
 #else
-            fprintf(out, "            font_cfg.EllipsisChar = %hu;\n", font->ConfigData->EllipsisChar);
+                fprintf(out, "                font_cfg.EllipsisChar = %hu;\n", font->ConfigData[i].EllipsisChar);
 #endif
-            fprintf(out, "            ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(%s_%sdata_base85, size, &font_cfg);\n", "font", compressed_str);
-            fprintf(out, "            assert(font != nullptr);\n");
+                fprintf(out, "                font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(%s_%sdata_base85_%d, size, &font_cfg);\n", "font", compressed_str, i);
+                fprintf(out, "                assert(font != nullptr);\n");
+                fprintf(out, "            }\n");
+                fprintf(out, "\n");
+            }
             fprintf(out, "            return font;\n");
             fprintf(out, "        }\n");
             fprintf(out, "\n");
@@ -6492,17 +6510,15 @@ static ImGuiStyle* ExportToSource()
             fprintf(out, "            return &styles[1];\n");
             fprintf(out, "        }\n");
             fprintf(out, "\n");
-
-            //bool use_base85_encoding = true;
-            //if (use_base85_encoding)
+            for(int i = 0; i < font->ConfigDataCount; i++)
             {
-                fprintf(out, "        const char %s_%sdata_base85[%d+1] =\n", "font", compressed_str, (int)((compressed_sz + 3) / 4) * 5);
+                fprintf(out, "        const char %s_%sdata_base85_%d[%d+1] =\n", "font", compressed_str, i, (int)((compressed_sz[i] + 3) / 4) * 5);
                 fprintf(out, "            \"");
                 char prev_c = 0;
-                for (int src_i = 0; src_i < compressed_sz; src_i += 4)
+                for (int src_i = 0; src_i < compressed_sz[i]; src_i += 4)
                 {
                     // This is made a little more complicated by the fact that ??X sequences are interpreted as trigraphs by old C/C++ compilers. So we need to escape pairs of ??.
-                    unsigned int d = *(unsigned int*)(compressed + src_i);
+                    unsigned int d = *(unsigned int*)(compressed[i] + src_i);
                     for (unsigned int n5 = 0; n5 < 5; n5++, d /= 85)
                     {
                         char c = Encode85Byte(d);
@@ -6516,9 +6532,9 @@ static ImGuiStyle* ExportToSource()
                     }
                 }
                 fprintf(out, "\";\n");
-                fprintf(out, "    }\n");
-                fprintf(out, "}\n");
             }
+            fprintf(out, "    }\n");
+            fprintf(out, "}\n");
 
             fclose(out_hdr);
             fclose(out);

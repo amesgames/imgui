@@ -143,7 +143,6 @@ int main(int argc, char** argv)
         float fontSizePixels;
         ImFont* lastFont = NULL;
         char iconPath[1024] = "";
-        ImVector<ImWchar> icon_ranges;
         for (int i = 1; i < argc; i++) {
             switch (state)
             {
@@ -242,7 +241,7 @@ int main(int argc, char** argv)
 
                 case CmdLineState::ICON_RANGES:
                 {
-                    icon_ranges.clear();
+                    ImVector<ImWchar> icon_ranges;
                     while(i < argc && argv[i][0] != '-')
                         icon_ranges.push_back((unsigned short)strtol(argv[i++], NULL, 0));
                     if(0 != icon_ranges.size() % 2) {
@@ -251,9 +250,11 @@ int main(int argc, char** argv)
                     }
                     else
                         icon_ranges.push_back(0);
+                    ImWchar *result_icon_ranges = (ImWchar *)IM_ALLOC(icon_ranges.Size * sizeof(ImWchar));
+                    memcpy(result_icon_ranges, icon_ranges.Data, icon_ranges.Size * sizeof(ImWchar));
                     fprintf(stderr, "Attempting to load and merge icon Font from TTF file \"%s\"\n", iconPath);
                     ImFontConfig icons_config; icons_config.MergeMode = true; icons_config.PixelSnapH = true;
-                    io.Fonts->AddFontFromFileTTF(iconPath, fontSizePixels, &icons_config, icon_ranges.Data);
+                    io.Fonts->AddFontFromFileTTF(iconPath, fontSizePixels, &icons_config, result_icon_ranges);
                     state = CmdLineState::NONE;
                 }
                 break;
