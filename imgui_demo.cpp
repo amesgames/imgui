@@ -6337,7 +6337,7 @@ static ImGuiStyle* ExportToSource()
                     while (font->ConfigData[i].GlyphRanges[j])
                         j++;
                     j++; // for terminating 0
-                    fprintf(out, "                ImWchar* glyph_ranges = (ImWchar*)IM_ALLOC(sizeof(ImWchar) * %d);\n", i);
+                    fprintf(out, "                ImWchar* glyph_ranges = (ImWchar*)IM_ALLOC(sizeof(ImWchar) * %d);\n", j);
                     j = 0;
                     while (font->ConfigData[i].GlyphRanges[j])
                     {
